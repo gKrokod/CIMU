@@ -1,0 +1,3 @@
+/home/w/projects/CIMU/build/CMakeFiles/rebuild_cache.dir
+/home/w/projects/CIMU/build/CMakeFiles/edit_cache.dir
+/home/w/projects/CIMU/build/CMakeFiles/CIMU.dir

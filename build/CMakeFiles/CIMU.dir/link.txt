@@ -1,0 +1,1 @@
+/usr/bin/cc  -Wall -Wextra   CMakeFiles/CIMU.dir/src/main.c.o  -o CIMU 
