@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
-
+# 1 Step: download in root:
+# git clone https://github.com/ARM-software/CMSIS_5.git
+# git clone https://github.com/ARM-software/CMSIS-DSP.git
+# 2 Step:
+# mkdir -p build && cd build
+# cmake ../
+# cmake --build .
+# 3 Step: be happy
 # название проекта и используемый язык
 project(CIMU C)
 
@@ -19,4 +26,5 @@ add_subdirectory(${CMSISDSP}/Source bin_dsp)
 add_executable(CIMU src/main.c)
 
 target_link_libraries(CIMU PRIVATE CMSISDSP)
+# math standart
 target_link_libraries(CIMU PRIVATE m)
