@@ -1,6 +1,7 @@
 CMSIS-DSP/
 CMSIS_5/
 build/
+*.swp
 # Prerequisites
 *.d
 
