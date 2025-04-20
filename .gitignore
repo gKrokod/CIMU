@@ -1,3 +1,6 @@
+CMSIS-DSP/
+CMSIS_5/
+build/
 # Prerequisites
 *.d
 
@@ -46,8 +49,9 @@
 *.mod*
 *.cmd
 .tmp_versions/
+.build/
 modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-/build/
+
