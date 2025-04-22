@@ -1,26 +1,45 @@
 #include <stdio.h>
 #include "arm_math.h"
+#include "file_reader.h"
 
-#define MAX_LINE_LENGTH 256
+
+
 
 int main() {
-  FILE *file;
-  char line[MAX_LINE_LENGTH];
-  int line_count = 0;
+    // Инициализация коллекции данных
+    DataCollection dataCollection;
+    initDataCollection(&dataCollection, 10); // Начальная емкость 10
 
-  file = fopen("Data/input.txt","r"); //open for reading
-  if (file == NULL) {
-    printf("can't be opened Data/input.txt\n");
-    return 1;
-  }
+    // Чтение данных из файла
+    int readResult = readDataFile(&dataCollection);
+    if (readResult != 0) {
+        printf("Ошибка чтения файла: %d\n", readResult);
+        freeDataCollection(&dataCollection);
+        return 1;
+    }
 
-  while (fgets(line, MAX_LINE_LENGTH, file) && line_count < 3) {
-    printf("%s", line);
-    line_count++;
-  }
+    // Вывод первых трех строк
+    printf("Первые три строки из файла:\n");
+    printFirstNRows(&dataCollection, 3);
 
-  fclose(file); // release memory
-  return 0;
+    // Обработка данных (здесь будет математическая обработка)
+    /* ProcessedData results; */
+    /* int processResult = processData(&dataCollection, &results); */
+    /* if (processResult != 0) { */
+    /*     printf("Ошибка обработки данных: %d\n", processResult); */
+    /*     freeDataCollection(&dataCollection); */
+    /*     return 2; */
+    /* } */
+    /*  */
+    /* // Вывод результатов обработки */
+    /* printf("\nРезультаты обработки (первые 3):\n"); */
+    /* printProcessedData(&results, 3); */
+    /*  */
+    /* // Освобождение памяти */
+    /* freeProcessedData(&results); */
+    /* freeDataCollection(&dataCollection); */
+
+    return 0;
 }
 
 /* int main() { */
@@ -28,19 +47,19 @@ int main() {
 /*     float32_t A_data[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};  // Матрица 2x3 */
 /*     float32_t B_data[6] = {7.0, 8.0, 9.0, 10.0, 11.0, 12.0};  // Матрица 3x2 */
 /*     float32_t C_data[4];  // Результат матричного умножения 2x2 */
-/*      */
+/*  */
 /*     arm_matrix_instance_f32 A; */
 /*     arm_matrix_instance_f32 B; */
 /*     arm_matrix_instance_f32 C; */
-/*      */
+/*  */
 /*     // Инициализация структур матриц */
 /*     arm_mat_init_f32(&A, 2, 3, A_data); */
 /*     arm_mat_init_f32(&B, 3, 2, B_data); */
 /*     arm_mat_init_f32(&C, 2, 2, C_data); */
-/*      */
+/*  */
 /*     // Умножение матриц A * B = C */
 /*     arm_status status = arm_mat_mult_f32(&A, &B, &C); */
-/*      */
+/*  */
 /*     // Проверка статуса и вывод результата */
 /*     if (status == ARM_MATH_SUCCESS) { */
 /*         printf("Результат умножения матриц:\n"); */
@@ -53,6 +72,6 @@ int main() {
 /*     } else { */
 /*         printf("Ошибка при умножении матриц\n"); */
 /*     } */
-/*      */
+/*  */
 /*     return 0; */
 /* } */
