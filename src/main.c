@@ -8,26 +8,26 @@
 
 
 typedef struct {
-    float64_t x;
-    float64_t y;
-    float64_t z;
+    float32_t x;
+    float32_t y;
+    float32_t z;
 } Mag;
 
 typedef struct {
-    float64_t x;
-    float64_t y;
-    float64_t z;
+    float32_t x;
+    float32_t y;
+    float32_t z;
 } Gyro;
 
 typedef struct {
-    float64_t pitch;
-    float64_t roll;
+    float32_t pitch;
+    float32_t roll;
 } Angles;
 
 typedef struct {
-    float64_t x;
-    float64_t y;
-    float64_t z;
+    float32_t x;
+    float32_t y;
+    float32_t z;
 } Acceleration;
 
 Acceleration convertToAcceleration(const DataEntry* entry) {
@@ -59,32 +59,71 @@ Angles convertToAngles(const DataEntry* entry) {
 }
 
 void printStruct(const Acceleration* sensor){
-  printf("Triad: (%.2lf, %.2lf, %.2lf)\n",
+  printf("Triad: (%.2f, %.2f, %.2f)\n",
    sensor->x,
    sensor->y,
    sensor->z);
 }
 void printAngles(const Angles* sensor){
-  printf("Angles: (%.2lf, %.2lf)\n",
+  printf("Angles: (%.2f, %.2f)\n",
    sensor->pitch,
    sensor->roll);
 }
 
-float64_t calculateRoll(const Acceleration* acc) {
-    float64_t n = DEG_TO_RAD * acc->y;
-    float64_t d = DEG_TO_RAD * acc->z;
-    return (RAD_TO_DEG * atan2f(n, d));
+float32_t calculateRoll(const Acceleration* acc) { // DEG
+    const float32_t n = acc->y;
+    const float32_t d = acc->z;
+    return (atan2f(n, d) * RAD_TO_DEG);
 }
 
-/* float64_t calculatePitch(const Acceleration* acc) { */
-/*     float64_t yz_sq_sum; */
-/*     arm_dot_prod_f64(&acc->y, &acc->z, 2, &yz_sq_sum); */
-/*      */
-/*     float32_t sqrt_yz; */
-/*     arm_sqrt_f64(yz_sq_sum, &sqrt_yz); */
-/*      */
-/*     return -atan2f(acc->x, sqrt_yz); */
-/* } */
+float32_t calculatePitch(const Acceleration* acc) { // DEG
+
+    const float32_t n = acc->x;
+    const float32_t vec[2] = {acc->y, acc->z};
+    float32_t sum_squares;
+    arm_dot_prod_f32(&vec, &vec, 2, &sum_squares);
+    float32_t d;
+    arm_sqrt_f32(sum_squares, &d);
+    return -(atan2f(n, d) * RAD_TO_DEG);
+}
+
+Angles calculateAngles(const Acceleration* acc) { //DEG
+  Angles angles;
+  angles.pitch = calculatePitch(acc);
+  angles.roll = calculateRoll(acc);
+  return angles;
+}
+
+float32_t calculateAzimuth(
+    const float32_t pitch_deg, 
+    const float32_t roll_deg, 
+    const Mag* mag
+) {
+  
+    const float32_t sin_pitch, cos_pitch;
+    arm_sin_cos_f32(pitch_deg, &sin_pitch, &cos_pitch);
+
+    const float32_t sin_roll, cos_roll;
+    arm_sin_cos_f32(roll_deg, &sin_roll, &cos_roll);
+
+    const float32_t n = 
+        -(mag->y * cos_roll - mag->z * sin_roll);
+    
+    const float32_t d = 
+        (mag->y * sin_roll + mag->z * cos_roll) * sin_pitch + 
+        mag->x * cos_pitch;
+    
+    // Вычисление азимута с корректировкой квадрантов
+    float32_t azimuth = atan2f(n, d);
+    if (n >= 0 && d >= 0) {azimuth += 0;} ;
+    if (n >= 0 && d < 0) {azimuth += PI;} ;
+    if (n < 0 && d >= 0) {azimuth +=  2 * PI;} ;
+    if (n < 0 && d < 0) {azimuth += PI;} ;
+    //
+    // Преобразование в градусы
+    return azimuth * RAD_TO_DEG;
+}
+
 
 
 
@@ -104,23 +143,21 @@ int main() {
     printf("Первые три строки из файла:\n");
     printFirstNRows(&dataCollection, 3);
 
-    Mag mm;
-    Acceleration aa;
-    Gyro gg;
-    Angles pitchRoll;
-    mm = convertToMag(&dataCollection.entries[0]);
-    aa = convertToAcceleration(&dataCollection.entries[0]);
-    gg = convertToGyro(&dataCollection.entries[0]);
-    pitchRoll = convertToAngles(&dataCollection.entries[0]);
-    printStruct(&mm);
-    printStruct(&aa);
-    printStruct(&gg);
-    printAngles(&pitchRoll);
-    printf("\nEND\n");
-
-    double bank;
-    bank = calculateRoll(&aa);
-    printf("\n ROLL : %.2lf\n", bank);
+    for (int i = 0; i < 3; i++) {
+  
+      Mag mm = convertToMag(&dataCollection.entries[i]);
+      Acceleration aa = convertToAcceleration(&dataCollection.entries[i]);
+      Angles pitchRoll = calculateAngles(&aa);
+      float az = calculateAzimuth(pitchRoll.pitch, pitchRoll.roll, &mm);
+      /* Gyro gg = convertToGyro(&dataCollection.entries[i]); */
+      /* Angles pitchRoll = convertToAngles(&dataCollection.entries[i]); */
+      /* printStruct(&mm); */
+      /* printStruct(&aa); */
+      /* printStruct(&gg); */
+      printAngles(&pitchRoll);
+      printf("Az: %.2f\n",az);
+      /* printf("\nEND\n"); */
+}
 
     /* printf("All collection:\n"); */
     /* printInputData(&dataCollection); */
@@ -143,9 +180,21 @@ int main() {
     /* freeDataCollection(&dataCollection); */
     //
     // Инициализация матриц
-    float64_t A_data[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};  // Матрица 2x3
-    float64_t B_data[6] = {7.0, 8.0, 9.0, 10.0, 11.0, 12.0};  // Матрица 3x2
-    float64_t C_data[4];  // Результат матричного умножения 2x2
+    float32_t A_data[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};  // Матрица 2x3
+    float32_t B_data[6] = {7.0, 8.0, 9.0, 10.0, 11.0, 12.0};  // Матрица 3x2
+    float32_t C_data[4];  // Результат матричного умножения 2x2
+
+
+    float32_t rad = 1.2; 
+    float32_t sin_pitch = sinf(rad);
+    float32_t cos_pitch = cosf(rad);
+    printf("%.2f   %.2f \n", sin_pitch, cos_pitch);
+    arm_sin_cos_f32(RAD_TO_DEG * rad, &sin_pitch, &cos_pitch);
+    printf("%.2f   %.2f \n", sin_pitch, cos_pitch);
+  
+
+    /* const float32_t sin_roll, cos_roll; */
+    /* arm_sin_cos_f32(roll_rad, &sin_roll, &cos_roll); */
 
     return 0;
 }

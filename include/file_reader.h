@@ -8,19 +8,19 @@
 typedef struct {
     float32_t time;
     float32_t time_step;
-    float64_t mag_x;
-    float64_t mag_y;
-    float64_t mag_z;
-    float64_t acc_x;
-    float64_t acc_y;
-    float64_t acc_z;
-    float64_t gyro_x;
-    float64_t gyro_y;
-    float64_t gyro_z;
+    float32_t mag_x;
+    float32_t mag_y;
+    float32_t mag_z;
+    float32_t acc_x;
+    float32_t acc_y;
+    float32_t acc_z;
+    float32_t gyro_x;
+    float32_t gyro_y;
+    float32_t gyro_z;
     float32_t temp;
-    float64_t pitch_sensor;
-    float64_t roll_sensor;
-    float64_t azimuth_sensor;
+    float32_t pitch_sensor;
+    float32_t roll_sensor;
+    float32_t azimuth_sensor;
 } DataEntry;
 
 // Структура для хранения коллекции записей

@@ -44,7 +44,7 @@ void printInputData(const DataCollection* collection) {
 static int parseDataEntry(const char* line, DataEntry* entry) {
     // Реализация парсинга зависит от формата данных в input.txt
     // Предполагаем CSV-формат с разделителями-запятыми
-    return sscanf(line, "%f\t%f\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%f\t%lf\t%lf\t%lf", 
+    return sscanf(line, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f", 
                   &entry->time, 
                   &entry->time_step, 
                   &entry->mag_x, 
