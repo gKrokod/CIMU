@@ -2,6 +2,7 @@
 add_executable(CIMU 
   main.c
   file_reader.c
+  angles.c
 )
 
 target_link_libraries(CIMU PRIVATE CMSISDSP)
