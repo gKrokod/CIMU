@@ -2,6 +2,10 @@
 #include "arm_math.h"
 #include "file_reader.h"
 
+// Преобразование радиан в градусы
+#define RAD_TO_DEG (180.0f / PI)
+#define DEG_TO_RAD (PI / 180.0f)
+
 
 typedef struct {
     float64_t x;
@@ -66,6 +70,23 @@ void printAngles(const Angles* sensor){
    sensor->roll);
 }
 
+float64_t calculateRoll(const Acceleration* acc) {
+    float64_t n = DEG_TO_RAD * acc->y;
+    float64_t d = DEG_TO_RAD * acc->z;
+    return (RAD_TO_DEG * atan2f(n, d));
+}
+
+/* float64_t calculatePitch(const Acceleration* acc) { */
+/*     float64_t yz_sq_sum; */
+/*     arm_dot_prod_f64(&acc->y, &acc->z, 2, &yz_sq_sum); */
+/*      */
+/*     float32_t sqrt_yz; */
+/*     arm_sqrt_f64(yz_sq_sum, &sqrt_yz); */
+/*      */
+/*     return -atan2f(acc->x, sqrt_yz); */
+/* } */
+
+
 
 int main() {
     // Инициализация коллекции данных
@@ -96,6 +117,10 @@ int main() {
     printStruct(&gg);
     printAngles(&pitchRoll);
     printf("\nEND\n");
+
+    double bank;
+    bank = calculateRoll(&aa);
+    printf("\n ROLL : %.2lf\n", bank);
 
     /* printf("All collection:\n"); */
     /* printInputData(&dataCollection); */
