@@ -2,6 +2,71 @@
 #include "arm_math.h"
 #include "file_reader.h"
 
+
+typedef struct {
+    float64_t x;
+    float64_t y;
+    float64_t z;
+} Mag;
+
+typedef struct {
+    float64_t x;
+    float64_t y;
+    float64_t z;
+} Gyro;
+
+typedef struct {
+    float64_t pitch;
+    float64_t roll;
+} Angles;
+
+typedef struct {
+    float64_t x;
+    float64_t y;
+    float64_t z;
+} Acceleration;
+
+Acceleration convertToAcceleration(const DataEntry* entry) {
+    Acceleration acc;
+    acc.x = entry->acc_x;
+    acc.y = entry->acc_y;
+    acc.z = entry->acc_z;
+    return acc;
+}
+Mag convertToMag(const DataEntry* entry) {
+    Mag mag;
+    mag.x = entry->mag_x;
+    mag.y = entry->mag_y;
+    mag.z = entry->mag_z;
+    return mag;
+}
+Gyro convertToGyro(const DataEntry* entry) {
+    Gyro gyro;
+    gyro.x = entry->gyro_x;
+    gyro.y = entry->gyro_y;
+    gyro.z = entry->gyro_z;
+    return gyro;
+}
+Angles convertToAngles(const DataEntry* entry) {
+    Angles angles;
+    angles.pitch = entry->pitch_sensor;
+    angles.roll = entry->roll_sensor;
+    return angles;
+}
+
+void printStruct(const Acceleration* sensor){
+  printf("Triad: (%.2lf, %.2lf, %.2lf)\n",
+   sensor->x,
+   sensor->y,
+   sensor->z);
+}
+void printAngles(const Angles* sensor){
+  printf("Angles: (%.2lf, %.2lf)\n",
+   sensor->pitch,
+   sensor->roll);
+}
+
+
 int main() {
     // Инициализация коллекции данных
     DataCollection dataCollection;
@@ -14,10 +79,26 @@ int main() {
         freeDataCollection(&dataCollection);
         return 1;
     }
-
     // Вывод первых трех строк
     printf("Первые три строки из файла:\n");
-    printFirstNRows(&dataCollection, 3300);
+    printFirstNRows(&dataCollection, 3);
+
+    Mag mm;
+    Acceleration aa;
+    Gyro gg;
+    Angles pitchRoll;
+    mm = convertToMag(&dataCollection.entries[0]);
+    aa = convertToAcceleration(&dataCollection.entries[0]);
+    gg = convertToGyro(&dataCollection.entries[0]);
+    pitchRoll = convertToAngles(&dataCollection.entries[0]);
+    printStruct(&mm);
+    printStruct(&aa);
+    printStruct(&gg);
+    printAngles(&pitchRoll);
+    printf("\nEND\n");
+
+    /* printf("All collection:\n"); */
+    /* printInputData(&dataCollection); */
 
     // Обработка данных (здесь будет математическая обработка)
     /* ProcessedData results; */

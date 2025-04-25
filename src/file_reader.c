@@ -18,6 +18,28 @@ void freeDataCollection(DataCollection* collection) {
     collection->capacity = 0;
 }
 
+void printInputData(const DataCollection* collection) {
+    int rowsToPrint = collection->count;
+    for (int i = 0; i < rowsToPrint; i++) {
+        printf("Время: %.2f, Mag: (%.2f, %.2f, %.2f), Acc: (%.2f, %.2f, %.2f), Gyro: (%.2f, %.2f, %.2f), Temp: %.2f, Pitch-Roll-Azimuth: (%.2f, %.2f, %.2f)\n", 
+               collection->entries[i].time,
+               collection->entries[i].mag_x,
+               collection->entries[i].mag_y,
+               collection->entries[i].mag_z,
+               collection->entries[i].acc_x,
+               collection->entries[i].acc_y,
+               collection->entries[i].acc_z,
+               collection->entries[i].gyro_x,
+               collection->entries[i].gyro_y,
+               collection->entries[i].gyro_z,
+               collection->entries[i].temp,
+               collection->entries[i].pitch_sensor,
+               collection->entries[i].roll_sensor,
+               collection->entries[i].azimuth_sensor);
+    }
+
+};
+
 // Вспомогательная функция для парсинга строки в запись данных
 static int parseDataEntry(const char* line, DataEntry* entry) {
     // Реализация парсинга зависит от формата данных в input.txt

@@ -42,5 +42,8 @@ int readDataFile(DataCollection* collection);
 // Печать первых N строк из коллекции
 void printFirstNRows(const DataCollection* collection, int n);
 
+// Печать первых N строк из коллекции
+void printInputData(const DataCollection* collection);
+
 #endif // FILE_READER_H
 
