@@ -2,9 +2,6 @@
 #include "arm_math.h"
 #include "file_reader.h"
 
-
-
-
 int main() {
     // Инициализация коллекции данных
     DataCollection dataCollection;
@@ -20,7 +17,7 @@ int main() {
 
     // Вывод первых трех строк
     printf("Первые три строки из файла:\n");
-    printFirstNRows(&dataCollection, 3);
+    printFirstNRows(&dataCollection, 3300);
 
     // Обработка данных (здесь будет математическая обработка)
     /* ProcessedData results; */
@@ -38,6 +35,11 @@ int main() {
     /* // Освобождение памяти */
     /* freeProcessedData(&results); */
     /* freeDataCollection(&dataCollection); */
+    //
+    // Инициализация матриц
+    float64_t A_data[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};  // Матрица 2x3
+    float64_t B_data[6] = {7.0, 8.0, 9.0, 10.0, 11.0, 12.0};  // Матрица 3x2
+    float64_t C_data[4];  // Результат матричного умножения 2x2
 
     return 0;
 }

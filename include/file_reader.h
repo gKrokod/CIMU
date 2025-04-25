@@ -2,15 +2,25 @@
 #define FILE_READER_H //guard for double include file
 
 #include <stdio.h>
+#include "arm_math.h"
 
 // Структура для хранения данных из файла
 typedef struct {
-    // Предполагаем, что в файле содержатся данные об углах
-    double timestamp;
-    double angle_x;
-    double angle_y;
-    double angle_z;
-    // ... другие поля по необходимости
+    float32_t time;
+    float32_t time_step;
+    float64_t mag_x;
+    float64_t mag_y;
+    float64_t mag_z;
+    float64_t acc_x;
+    float64_t acc_y;
+    float64_t acc_z;
+    float64_t gyro_x;
+    float64_t gyro_y;
+    float64_t gyro_z;
+    float32_t temp;
+    float64_t pitch_sensor;
+    float64_t roll_sensor;
+    float64_t azimuth_sensor;
 } DataEntry;
 
 // Структура для хранения коллекции записей

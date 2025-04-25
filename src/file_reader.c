@@ -22,11 +22,22 @@ void freeDataCollection(DataCollection* collection) {
 static int parseDataEntry(const char* line, DataEntry* entry) {
     // Реализация парсинга зависит от формата данных в input.txt
     // Предполагаем CSV-формат с разделителями-запятыми
-    return sscanf(line, "%lf,%lf,%lf,%lf", 
-                  &entry->timestamp, 
-                  &entry->angle_x, 
-                  &entry->angle_y, 
-                  &entry->angle_z);
+    return sscanf(line, "%f\t%f\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%f\t%lf\t%lf\t%lf", 
+                  &entry->time, 
+                  &entry->time_step, 
+                  &entry->mag_x, 
+                  &entry->mag_y, 
+                  &entry->mag_z,
+                  &entry->acc_x, 
+                  &entry->acc_y, 
+                  &entry->acc_z,
+                  &entry->gyro_x, 
+                  &entry->gyro_y, 
+                  &entry->gyro_z,
+                  &entry->temp, 
+                  &entry->pitch_sensor, 
+                  &entry->roll_sensor,
+                  &entry->azimuth_sensor);
 }
 
 int readDataFile(DataCollection* collection) {
@@ -72,12 +83,21 @@ void printFirstNRows(const DataCollection* collection, int n) {
     int rowsToPrint = (collection->count < n) ? collection->count : n;
     
     for (int i = 0; i < rowsToPrint; i++) {
-        printf("Строка %d: Время: %.2f, Углы: (%.2f, %.2f, %.2f)\n", 
-               i + 1,
-               collection->entries[i].timestamp,
-               collection->entries[i].angle_x,
-               collection->entries[i].angle_y,
-               collection->entries[i].angle_z);
+        printf("Время: %.2f, Mag: (%.2f, %.2f, %.2f), Acc: (%.2f, %.2f, %.2f), Gyro: (%.2f, %.2f, %.2f), Temp: %.2f, Pitch-Roll-Azimuth: (%.2f, %.2f, %.2f)\n", 
+               collection->entries[i].time,
+               collection->entries[i].mag_x,
+               collection->entries[i].mag_y,
+               collection->entries[i].mag_z,
+               collection->entries[i].acc_x,
+               collection->entries[i].acc_y,
+               collection->entries[i].acc_z,
+               collection->entries[i].gyro_x,
+               collection->entries[i].gyro_y,
+               collection->entries[i].gyro_z,
+               collection->entries[i].temp,
+               collection->entries[i].pitch_sensor,
+               collection->entries[i].roll_sensor,
+               collection->entries[i].azimuth_sensor);
     }
 }
 
