@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_LINE_LENGTH 256
-#define FILE_INPUT_DATA "Data/input.txt"
 
 void initDataCollection(DataCollection* collection, int initialCapacity) {
     collection->entries = (DataEntry*)malloc(initialCapacity * sizeof(DataEntry));

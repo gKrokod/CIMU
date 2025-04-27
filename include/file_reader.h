@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include "arm_math.h"
 
+#define MAX_LINE_LENGTH 256
+#define FILE_INPUT_DATA "Data/input.txt"
+
 // Структура для хранения данных из файла
 typedef struct {
     float32_t time;

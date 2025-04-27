@@ -2,6 +2,7 @@
 add_executable(CIMU 
   main.c
   file_reader.c
+  file_writer.c
   angles.c
 )
 
