@@ -22,9 +22,11 @@ include_directories(${CMSISCORE}/Include)
 include_directories(${CMSISDSP}/Include)
 add_subdirectory(${CMSISDSP}/Source bin_dsp)
 
-# добавление исполняемого файла из исходного кода
-add_executable(CIMU src/main.c)
+add_subdirectory(src)
 
-target_link_libraries(CIMU PRIVATE CMSISDSP)
-# math standart
-target_link_libraries(CIMU PRIVATE m)
+# # добавление исполняемого файла из исходного кода
+# add_executable(CIMU src/main.c)
+#
+# target_link_libraries(CIMU PRIVATE CMSISDSP)
+# # math standart
+# target_link_libraries(CIMU PRIVATE m)
