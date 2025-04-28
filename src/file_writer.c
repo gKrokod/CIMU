@@ -56,9 +56,9 @@ static DataEntry averageFirstNEntries(const DataCollection* collection, const ui
     return avgEntry;
 }
 
-void file_writer_title(const FILE* file, const DataCollection* collection) {
+DataEntry file_writer_title(const FILE* file, const DataCollection* collection) {
     // Записываем заголовок в файл
-    fprintf(file, "Time\tPitchSensor\tRollSensor\tAzimuthSensor\n");
+    fprintf(file, "Time\tPitchSensor\tRollSensor\tAzimuthSensor\tPitchIIR\tRollIIR\tAzimuthIIR\n");
     // Усреднение первых 10 записей
     DataEntry averagedEntry = averageFirstNEntries(collection, MAX_AVERAGE_SAMPLES);
     // Расчет углов на усредненных данных
@@ -72,4 +72,5 @@ void file_writer_title(const FILE* file, const DataCollection* collection) {
                 avg_angles.pitch, 
                 avg_angles.roll, 
                 avg_azimuth);
+    return averagedEntry;
 };
