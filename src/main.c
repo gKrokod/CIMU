@@ -4,8 +4,65 @@
 #include "file_writer.h"
 #include "angles.h"
 
-#define DELTA_T = 0.04f
-#define ALPHA_LOW_PASS = 0.081f //10 Hz
+#define DELTA_T 0.04f
+#define ALPHA_LOW_PASS 0.081f //10 Hz
+
+// simple IIR Filter
+typedef struct {
+    float32_t mag_x;
+    float32_t mag_y;
+    float32_t mag_z;
+    float32_t acc_x;
+    float32_t acc_y;
+    float32_t acc_z;
+} IIRFilter;
+
+
+void initialFilter (IIRFilter * filter, DataEntry * data){
+  filter->mag_x  = data->mag_x;
+  filter->mag_y  = data->mag_y;
+  filter->mag_z  = data->mag_z;
+  filter->acc_x  = data->acc_x;
+  filter->acc_y  = data->acc_y;
+  filter->acc_z  = data->acc_z;
+
+}
+// берем новые данные, параметры фильтра с прошлого шага и получаем новые 
+// параметры фильтра и данные для расчета углов
+DataEntry filterStep (IIRFilter * filter, const DataEntry * data ) {
+  DataEntry filteredData;
+
+  filter->mag_x  = ALPHA_LOW_PASS * filter->mag_x + ( 1 - ALPHA_LOW_PASS) * data->mag_x;
+  filter->mag_y  = ALPHA_LOW_PASS * filter->mag_y + ( 1 - ALPHA_LOW_PASS) * data->mag_y;
+  filter->mag_z  = ALPHA_LOW_PASS * filter->mag_z + ( 1 - ALPHA_LOW_PASS) * data->mag_z;
+  filter->acc_x  = ALPHA_LOW_PASS * filter->acc_x + ( 1 - ALPHA_LOW_PASS) * data->acc_x;
+  filter->acc_y  = ALPHA_LOW_PASS * filter->acc_y + ( 1 - ALPHA_LOW_PASS) * data->acc_y;
+  filter->acc_z  = ALPHA_LOW_PASS * filter->acc_z + ( 1 - ALPHA_LOW_PASS) * data->acc_z;
+
+  filteredData = &data;
+  /* filteredData->mag_x = filter->mag_x; */
+  /* filteredData->mag_y = filter->mag_y; */
+  /* filteredData->mag_z = filter->mag_z; */
+  /* filteredData->acc_x = filter->acc_x; */
+  /* filteredData->acc_y = filter->acc_y; */
+  /* filteredData->acc_z = filter->acc_z; */
+
+
+  return filteredData; 
+}
+
+
+/* initIIR :: Double -> Double -> Double -> Double -> Double -> Double -> Double ->  IIRState */
+/* initIIR a x y z mx my mz = IIRState a (x,y,z) (mx,my,mz) */
+/*  */
+/* iirStep :: (Double, Double, Double) -> (Double, Double, Double)-> IIRState -> IIRState  */
+/* iirStep (x, y, z) (mx, my, mz) (IIRState a (pX, pY, pZ) (pmX, pmY, pmZ)) = IIRState a (nX, nY, nZ) (nmX, nmY, nmZ) */
+/*   where nX = a * pX + (1 - a) * x */
+/*         nY = a * pY + (1 - a) * y */
+/*         nZ = a * pZ + (1 - a) * z */
+/*         nmX = a * pmX + (1 - a) * mx */
+/*         nmY = a * pmY + (1 - a) * my */
+/*         nmZ = a * pmZ + (1 - a) * mz */
 
 int main() {
     // Инициализация коллекции данных
@@ -18,7 +75,18 @@ int main() {
     // Открываем файл для записи результатов
     FILE *outputFile = fopen(OUTPUT_FILE, "w");
     // write Title and average value
-    file_writer_title(outputFile, &dataCollection);
+    DataEntry dataAverage = file_writer_title(outputFile, &dataCollection);
+    IIRFilter iir;
+    initialFilter (&iir, &dataAverage);
+    printf("%.2f", iir.acc_z);
+    
+
+    /* DataEntry averagedEntry = averageFirstNEntries(collection, MAX_AVERAGE_SAMPLES); */
+    /* // Расчет углов на усредненных данных */
+    /* Acceleration avg_acc = convertToAcceleration(&averagedEntry); */
+    /* Mag avg_mag = convertToMag(&averagedEntry); */
+    /* Angles avg_angles = calculateAngles(&avg_acc); */
+    /* float avg_azimuth = calculateAzimuth(avg_angles.pitch, avg_angles.roll, &avg_mag); */
 
     // Для каждой строки входного файла выполняем расчеты и записываем в файл
     for (int i = MAX_AVERAGE_SAMPLES; i < dataCollection.count; i++) {
@@ -76,3 +144,9 @@ int main() {
 /*  */
 /*     return 0; */
 /* } */
+/* data IIRState = IIRState */
+/*     { alpha :: Double  -- for 25 Hz and f sreza 5 Hz   =    0.28461. Remember theorem Kotelnikov */
+/*     , stateAcc :: (Double, Double, Double) -- (x,y,z)   - y (n - 1) */
+/*     , stateMag :: (Double, Double, Double) -- (x,y,z)   - y (n - 1) */
+/*     } deriving (Show) */
+/*  */
