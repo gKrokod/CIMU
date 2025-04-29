@@ -18,10 +18,11 @@ int main() {
     // Открываем файл для записи результатов
     FILE *outputFile = fopen(OUTPUT_FILE, "w");
     // write Title and average value
+    // усредняяем здесь первые значения для исходных данных.
     DataEntry dataAverage = file_writer_title(outputFile, &dataCollection);
     IIRFilter iir;
     initialFilter (&iir, &dataAverage);
-    printf("%.2f", iir.acc_z);
+    /* printf("%.2f", iir.acc_z); */
     
 
     // Для каждой строки входного файла выполняем расчеты и записываем в файл
