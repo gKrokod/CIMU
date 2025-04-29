@@ -38,13 +38,14 @@ static arm_status mat_inv(const arm_matrix_instance_f32* A,
 
 void Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll) {
     // Выделение памяти для всех матриц
-    static float32_t state_data[STATE_DIM] = {
-        initialPitch * M_PI / 180.0f,  // Convert to radians
-        initialRoll * M_PI / 180.0f,
-        0.0f,
-        0.0f
-    };
-    
+
+    float32_t state_data[STATE_DIM];
+    state_data[0] = initialPitch * (float32_t)M_PI / 180.0f;
+    state_data[1] = initialRoll * (float32_t)M_PI / 180.0f;
+    state_data[2] = 0.0f;
+    state_data[3] = 0.0f;
+
+
     static float32_t P_data[STATE_DIM * STATE_DIM] = {
         0.01f, 0.0f,  0.0f,   0.0f,
         0.0f,  0.01f, 0.0f,   0.0f,
@@ -54,7 +55,15 @@ void Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll
     
     static float32_t F_data[STATE_DIM * STATE_DIM] = {0};
     static float32_t H_data[MEAS_DIM * STATE_DIM] = {0};
-    static float32_t Q_data[STATE_DIM * STATE_DIM] = {0};
+
+    static float32_t Q_data[STATE_DIM * STATE_DIM] = {
+        0.0001f, 0.0f,   0.0f,    0.0f,
+        0.0f,    0.0001f,0.0f,    0.0f,
+        0.0f,    0.0f,   0.00001f,0.0f,
+        0.0f,    0.0f,   0.0f,    0.00001f
+    };
+    arm_copy_f32(Q_data, kf->Q.pData, STATE_DIM * STATE_DIM);
+
     static float32_t R_data[MEAS_DIM * MEAS_DIM] = {
         0.0007f, 0.0f,
         0.0f,    0.0009f
@@ -66,7 +75,15 @@ void Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll
     static float32_t tmp2_data[STATE_DIM * MEAS_DIM];
     static float32_t tmp3_data[MEAS_DIM * MEAS_DIM];
     static float32_t tmp4_data[MEAS_DIM * MEAS_DIM];
-
+    
+    // Инициализация единичной матрицы
+    static float32_t identity_data[STATE_DIM * STATE_DIM] = {
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    };
+    
     // Инициализация матричных структур
     matrix_init(&kf->state, STATE_DIM, 1, state_data);
     matrix_init(&kf->covariance, STATE_DIM, STATE_DIM, P_data);
@@ -80,6 +97,7 @@ void Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll
     matrix_init(&kf->tmp2, STATE_DIM, MEAS_DIM, tmp2_data);
     matrix_init(&kf->tmp3, MEAS_DIM, MEAS_DIM, tmp3_data);
     matrix_init(&kf->tmp4, MEAS_DIM, MEAS_DIM, tmp4_data);
+    matrix_init(&kf->identity, STATE_DIM, STATE_DIM, identity_data);
 }
 
 void Kalman_Predict(KalmanFilter* kf, float32_t dt, float32_t wN, float32_t wE) {
@@ -120,13 +138,13 @@ void Kalman_Predict(KalmanFilter* kf, float32_t dt, float32_t wN, float32_t wE) 
 void Kalman_Update(KalmanFilter* kf, float32_t measuredPitch, float32_t measuredRoll) {
     // Преобразование измерений в радианы
     float32_t z_data[MEAS_DIM] = {
-        measuredPitch * M_PI / 180.0f,
-        measuredRoll * M_PI / 180.0f
+        measuredPitch * (float32_t)M_PI / 180.0f,
+        measuredRoll * (float32_t)M_PI / 180.0f
     };
     arm_matrix_instance_f32 z;
     matrix_init(&z, MEAS_DIM, 1, z_data);
 
-    // Матрица измерений H
+    // Матрица измерений H (инициализируется каждый раз, так как может меняться)
     float32_t H_data[MEAS_DIM * STATE_DIM] = {
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f
@@ -150,7 +168,14 @@ void Kalman_Update(KalmanFilter* kf, float32_t measuredPitch, float32_t measured
     // Расчет коэффициента Калмана: K = P*H^T*S^-1
     arm_mat_trans_f32(&kf->H, &kf->tmp4);
     arm_mat_mult_f32(&kf->covariance, &kf->tmp4, &kf->tmp1);
-    mat_inv(&kf->tmp3, &kf->tmp4);
+    
+    // Добавляем проверку ошибок инверсии
+    arm_status inv_status = mat_inv(&kf->tmp3, &kf->tmp4);
+    if(inv_status != ARM_MATH_SUCCESS) {
+        // Обработка ошибки: матрица S вырождена
+        return;
+    }
+    
     arm_mat_mult_f32(&kf->tmp1, &kf->tmp4, &kf->K);
 
     // Обновление состояния: x = x + K*y
@@ -159,10 +184,14 @@ void Kalman_Update(KalmanFilter* kf, float32_t measuredPitch, float32_t measured
 
     // Обновление ковариации: P = (I - K*H)*P
     arm_mat_mult_f32(&kf->K, &kf->H, &kf->tmp1);
-    arm_mat_sub_f32(&arm_matrix_instance_f32_identity, &kf->tmp1, &kf->tmp2);
+    
+    // Используем предварительно созданную единичную матрицу из структуры
+    arm_mat_sub_f32(&kf->identity, &kf->tmp1, &kf->tmp2);
     arm_mat_mult_f32(&kf->tmp2, &kf->covariance, &kf->tmp1);
     arm_copy_f32(kf->tmp1.pData, kf->covariance.pData, STATE_DIM * STATE_DIM);
 }
+
+
 
 void Kalman_GetAngles(KalmanFilter* kf, float32_t* pitch, float32_t* roll) {
     *pitch = kf->state.pData[0] * 180.0f / M_PI; // Convert to degrees

@@ -20,6 +20,7 @@ typedef struct {
     arm_matrix_instance_f32 tmp2;
     arm_matrix_instance_f32 tmp3;
     arm_matrix_instance_f32 tmp4;
+    arm_matrix_instance_f32 identity; // I
 } KalmanFilter;
 
 void Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll);

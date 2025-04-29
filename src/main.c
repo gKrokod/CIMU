@@ -3,13 +3,14 @@
 #include "file_reader.h"
 #include "file_writer.h"
 #include "filters/iir.h"
+#include "filters/kalman.h"
 #include "angles.h"
 
 #define DELTA_T 0.04f
 
 int main() {
     // Инициализация коллекции данных
-    printf("start\n");
+    printf("startNEW\n");
     DataCollection dataCollection;
     initDataCollection(&dataCollection, 10); // Начальная емкость 10
 
@@ -22,6 +23,12 @@ int main() {
     DataEntry dataAverage = file_writer_title(outputFile, &dataCollection);
     IIRFilter iir;
     initialFilter (&iir, &dataAverage);
+
+    KalmanFilter kf; // todo zadaj
+    /* float32_t initialPitch = dataAverage.pitch_sensor; */
+    /* float32_t initialRoll = dataAverage.roll_sensor; */
+    /* Kalman_Init(&kf, initialPitch, initialRoll); */
+
     /* printf("%.2f", iir.acc_z); */
     
 
@@ -42,7 +49,20 @@ int main() {
         float32_t iir_azimuth = calculateAzimuth(iir_pitchRoll.pitch, iir_pitchRoll.roll, &iir_mag);
         
 // Kalman фильтр
-//
+        /* Gyro gyro = convertToGyro(&dataCollection.entries[i]); */
+        /* float32_t wN = ...; // Реализуйте расчет wN и wE по данным гироскопа */
+        /* float32_t wE = ...; // согласно вашей логике */
+        /*  */
+        /* // Прогноз Калмана */
+        /* Kalman_Predict(&kf, DELTA_T, wN, wE); */
+        /*  */
+        /* // Обновление Калмана */
+        /* Kalman_Update(&kf, pitchRoll.pitch, pitchRoll.roll); */
+        /*  */
+        /* // Получение отфильтрованных углов */
+        /* float32_t kalman_pitch, kalman_roll; */
+        /* Kalman_GetAngles(&kf, &kalman_pitch, &kalman_roll); */
+
         // Записываем результаты в файл
         fprintf(outputFile, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n", 
                 dataCollection.entries[i].time, 
@@ -52,6 +72,17 @@ int main() {
                 iir_pitchRoll.pitch, 
                 iir_pitchRoll.roll, 
                 iir_azimuth);
+        /* fprintf(outputFile, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n", */
+        /*         dataCollection.entries[i].time, */
+        /*         pitchRoll.pitch, */
+        /*         pitchRoll.roll, */
+        /*         azimuth, */
+        /*         iir_pitchRoll.pitch, */
+        /*         iir_pitchRoll.roll, */
+        /*         iir_azimuth, */
+        /*         kalman_pitch, */
+        /*         kalman_roll); */
+
     }
     // Закрываем файл
     fclose(outputFile);
@@ -61,37 +92,3 @@ int main() {
     freeDataCollection(&dataCollection);
     return 0;
 }
-
-/* int main() { */
-/*     // Инициализация матриц */
-/*     float32_t A_data[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};  // Матрица 2x3 */
-/*     float32_t B_data[6] = {7.0, 8.0, 9.0, 10.0, 11.0, 12.0};  // Матрица 3x2 */
-/*     float32_t C_data[4];  // Результат матричного умножения 2x2 */
-/*  */
-/*     arm_matrix_instance_f32 A; */
-/*     arm_matrix_instance_f32 B; */
-/*     arm_matrix_instance_f32 C; */
-/*  */
-/*     // Инициализация структур матриц */
-/*     arm_mat_init_f32(&A, 2, 3, A_data); */
-/*     arm_mat_init_f32(&B, 3, 2, B_data); */
-/*     arm_mat_init_f32(&C, 2, 2, C_data); */
-/*  */
-/*     // Умножение матриц A * B = C */
-/*     arm_status status = arm_mat_mult_f32(&A, &B, &C); */
-/*  */
-/*     // Проверка статуса и вывод результата */
-/*     if (status == ARM_MATH_SUCCESS) { */
-/*         printf("Результат умножения матриц:\n"); */
-/*         for (int i = 0; i < 2; i++) { */
-/*             for (int j = 0; j < 2; j++) { */
-/*                 printf("%f ", C.pData[i * 2 + j]); */
-/*             } */
-/*             printf("\n"); */
-/*         } */
-/*     } else { */
-/*         printf("Ошибка при умножении матриц\n"); */
-/*     } */
-/*  */
-/*     return 0; */
-/* } */
