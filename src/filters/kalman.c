@@ -149,6 +149,8 @@ void Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll
 
 void Kalman_Predict(KalmanFilter* kf, float32_t dt, float32_t wN, float32_t wE) {
 
+    arm_status status;
+
     // Прогноз состояния: x = F*x + B*u
     float32_t u_data[CTRL_DIM] = {
         wN * (float32_t)PI / 180.0f,
@@ -202,10 +204,11 @@ void Kalman_Update(KalmanFilter* kf, float32_t measuredPitch, float32_t measured
     /* // Обновление состояния: x = x + K*y */
     arm_mat_mult_f32(&kf->K, &kf->tmp21a, &kf->tmp41a); // 4><2 * 2 >< 1 =  4 >< 1
 
-    arm_mat_add_f32(&kf->state, &kf->tmp41a, &kf->state); // todo. можно ли так складывать, ранее избегал
-    /* arm_mat_add_f32(&kf->state, &kf->tmp41a, &kf->tmp41b); // todo. можно ли так складывать, ранее избегал */
-    /*  */
-    /* arm_copy_f32(&kf->tmp41b.pData, &kf->state.pData, STATE_DIM * 1 );  */
+    /* arm_mat_add_f32(&kf->state, &kf->tmp41a, &kf->state); // todo. можно ли так складывать, ранее избегал */
+    arm_mat_add_f32(&kf->state, &kf->tmp41a, &kf->tmp41b); // todo. можно ли так складывать, ранее избегал
+    /* arm_copy_f32(&kf->tmp41b, &kf->state, STATE_DIM * 1 );  //так стало работать, убрал .pPoint */
+    /* arm_copy_f32(&kf->tmp41b.pData, &kf->state.pData, STATE_DIM * 1 );  //так стало работать, убрал .pPoint */
+
     /*  */
     // Обновление ковариации: P = (I - K*H)*P
     arm_mat_mult_f32(&kf->K, &kf->H, &kf->tmp44a); // 4 >< 2 * 2 <> 4 = 4 <> 4    K * H
