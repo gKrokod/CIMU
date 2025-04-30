@@ -1,6 +1,8 @@
 #include "filters/kalman.h"
 #include <math.h>
 
+#define DELTA_T 0.04f
+
 static void matrix_init(arm_matrix_instance_f32* m, 
                       uint16_t rows, 
                       uint16_t cols, 
@@ -37,46 +39,47 @@ static arm_status mat_inv(const arm_matrix_instance_f32* A,
 }
 
 void Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll) {
-    // Выделение памяти для всех матриц
-
-    float32_t state_data[STATE_DIM];
-    state_data[0] = initialPitch * (float32_t)M_PI / 180.0f;
-    state_data[1] = initialRoll * (float32_t)M_PI / 180.0f;
-    state_data[2] = 0.0f;
-    state_data[3] = 0.0f;
-
-
-    static float32_t P_data[STATE_DIM * STATE_DIM] = {
-        0.01f, 0.0f,  0.0f,   0.0f,
-        0.0f,  0.01f, 0.0f,   0.0f,
-        0.0f,  0.0f,  0.0016f,0.0f,
-        0.0f,  0.0f,  0.0f,   0.0016f
+    /* // Выделение памяти для всех матриц */
+    /*  */
+    static float32_t F_data[STATE_DIM * STATE_DIM] = {
+        1.0f, 0.0f,  (-DELTA_T),   0.0f,
+        0.0f,  1.0f, 0.0f,   (-DELTA_T),
+        0.0f,  0.0f,  1.0f,0.0f,
+        0.0f,  0.0f,  0.0f,   1.0f
     };
-    
-    static float32_t F_data[STATE_DIM * STATE_DIM] = {0};
-    static float32_t H_data[MEAS_DIM * STATE_DIM] = {0};
-
+    /*  */
+    static float32_t H_data[MEAS_DIM * STATE_DIM] = {
+        1.0f, 0.0f, 0.0f,  0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f
+    };
+    /*  */
+    static float32_t B_data[STATE_DIM * CTRL_DIM] = {
+        0.0f, (DELTA_T),
+        (DELTA_T), 0.0f,
+        0.0f,  0.0f,
+        0.0f,  0.0f
+    };
+    /*  */
     static float32_t Q_data[STATE_DIM * STATE_DIM] = {
-        0.0001f, 0.0f,   0.0f,    0.0f,
-        0.0f,    0.0001f,0.0f,    0.0f,
-        0.0f,    0.0f,   0.00001f,0.0f,
-        0.0f,    0.0f,   0.0f,    0.00001f
+        0.01f * DELTA_T, 0.0f,   0.0f,    0.0f,
+        0.0f,    0.01f * DELTA_T,0.0f,    0.0f,
+        0.0f,    0.0f,   0.0016f * DELTA_T,0.0f,
+        0.0f,    0.0f,   0.0f,    0.0016f * DELTA_T
     };
-    arm_copy_f32(Q_data, kf->Q.pData, STATE_DIM * STATE_DIM);
-
+    /*  */
     static float32_t R_data[MEAS_DIM * MEAS_DIM] = {
         0.0007f, 0.0f,
         0.0f,    0.0009f
     };
-    
-    static float32_t B_data[STATE_DIM * CTRL_DIM] = {0};
-    static float32_t K_data[STATE_DIM * MEAS_DIM] = {0};
+
+    //todo разбираться тут
+    static float32_t K_data[STATE_DIM * MEAS_DIM] = {0}; // 4 >< 2
     static float32_t tmp1_data[STATE_DIM * STATE_DIM];
     static float32_t tmp2_data[STATE_DIM * MEAS_DIM];
     static float32_t tmp3_data[MEAS_DIM * MEAS_DIM];
     static float32_t tmp4_data[MEAS_DIM * MEAS_DIM];
-    
-    // Инициализация единичной матрицы
+    /*  */
+    /* // Инициализация единичной матрицы */
     static float32_t identity_data[STATE_DIM * STATE_DIM] = {
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
@@ -84,6 +87,18 @@ void Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll
         0.0f, 0.0f, 0.0f, 1.0f
     };
     
+    static float32_t state_data[STATE_DIM];
+    state_data[0] = initialPitch * (float32_t)M_PI / 180.0f;
+    state_data[1] = initialRoll * (float32_t)M_PI / 180.0f;
+    state_data[2] = 0.0f;
+    state_data[3] = 0.0f;
+
+    static float32_t P_data[STATE_DIM * STATE_DIM] = {
+        0.01f, 0.0f,  0.0f,   0.0f,
+        0.0f,  0.01f, 0.0f,   0.0f,
+        0.0f,  0.0f,  0.0016f,0.0f,
+        0.0f,  0.0f,  0.0f,   0.0016f
+    };
     // Инициализация матричных структур
     matrix_init(&kf->state, STATE_DIM, 1, state_data);
     matrix_init(&kf->covariance, STATE_DIM, STATE_DIM, P_data);
@@ -144,7 +159,7 @@ void Kalman_Update(KalmanFilter* kf, float32_t measuredPitch, float32_t measured
     arm_matrix_instance_f32 z;
     matrix_init(&z, MEAS_DIM, 1, z_data);
 
-    // Матрица измерений H (инициализируется каждый раз, так как может меняться)
+    // Матрица измерений H 
     float32_t H_data[MEAS_DIM * STATE_DIM] = {
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f

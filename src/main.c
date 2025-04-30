@@ -6,7 +6,7 @@
 #include "filters/kalman.h"
 #include "angles.h"
 
-#define DELTA_T 0.04f
+#define DELTA_TT 0.04f
 
 int main() {
     // Инициализация коллекции данных
@@ -25,12 +25,14 @@ int main() {
     initialFilter (&iir, &dataAverage);
 
     KalmanFilter kf; // todo zadaj
-    /* float32_t initialPitch = dataAverage.pitch_sensor; */
-    /* float32_t initialRoll = dataAverage.roll_sensor; */
-    /* Kalman_Init(&kf, initialPitch, initialRoll); */
-
-    /* printf("%.2f", iir.acc_z); */
-    
+    /*                  // */
+    Acceleration avg_acc = convertToAcceleration(&dataAverage);
+    Mag avg_mag = convertToMag(&dataAverage);
+    Angles avg_angles = calculateAngles(&avg_acc);
+    /*  */
+    Kalman_Init(&kf, avg_angles.pitch, avg_angles.roll);
+    /*  */
+    printf("%.2f %.2f ", avg_angles.pitch, avg_angles.roll);
 
     // Для каждой строки входного файла выполняем расчеты и записываем в файл
     for (int i = MAX_AVERAGE_SAMPLES; i < dataCollection.count; i++) {
@@ -49,39 +51,32 @@ int main() {
         float32_t iir_azimuth = calculateAzimuth(iir_pitchRoll.pitch, iir_pitchRoll.roll, &iir_mag);
         
 // Kalman фильтр
-        /* Gyro gyro = convertToGyro(&dataCollection.entries[i]); */
-        /* float32_t wN = ...; // Реализуйте расчет wN и wE по данным гироскопа */
-        /* float32_t wE = ...; // согласно вашей логике */
+        Gyro gyro = convertToGyro(&dataCollection.entries[i]);
+        float32_t wN = 0.0f; // Реализуйте расчет wN и wE по данным гироскопа
+        float32_t wE = 0.0f; // согласно вашей логике
         /*  */
         /* // Прогноз Калмана */
-        /* Kalman_Predict(&kf, DELTA_T, wN, wE); */
+        Kalman_Predict(&kf, DELTA_TT, wN, wE);
         /*  */
         /* // Обновление Калмана */
-        /* Kalman_Update(&kf, pitchRoll.pitch, pitchRoll.roll); */
+        Kalman_Update(&kf, pitchRoll.pitch, pitchRoll.roll);
         /*  */
         /* // Получение отфильтрованных углов */
-        /* float32_t kalman_pitch, kalman_roll; */
-        /* Kalman_GetAngles(&kf, &kalman_pitch, &kalman_roll); */
+        float32_t kalman_pitch, kalman_roll;
+        Kalman_GetAngles(&kf, &kalman_pitch, &kalman_roll);
+        float32_t kalman_azimuth = calculateAzimuth(kalman_pitch, kalman_roll, &iir_mag);
 
-        // Записываем результаты в файл
-        fprintf(outputFile, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n", 
-                dataCollection.entries[i].time, 
-                pitchRoll.pitch, 
-                pitchRoll.roll, 
+        fprintf(outputFile, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n",
+                dataCollection.entries[i].time,
+                pitchRoll.pitch,
+                pitchRoll.roll,
                 azimuth,
-                iir_pitchRoll.pitch, 
-                iir_pitchRoll.roll, 
-                iir_azimuth);
-        /* fprintf(outputFile, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n", */
-        /*         dataCollection.entries[i].time, */
-        /*         pitchRoll.pitch, */
-        /*         pitchRoll.roll, */
-        /*         azimuth, */
-        /*         iir_pitchRoll.pitch, */
-        /*         iir_pitchRoll.roll, */
-        /*         iir_azimuth, */
-        /*         kalman_pitch, */
-        /*         kalman_roll); */
+                iir_pitchRoll.pitch,
+                iir_pitchRoll.roll,
+                iir_azimuth,
+                kalman_pitch,
+                kalman_roll,
+                kalman_azimuth);
 
     }
     // Закрываем файл
