@@ -3,39 +3,28 @@
 
 #include "arm_math.h"
 
-#define STATE_DIM 4
-#define MEAS_DIM 2
-#define CTRL_DIM 2
+typedef struct {
+    arm_matrix_instance_f32 F; // 4 >< 4  const       // State transition matrix
+    arm_matrix_instance_f32 H; // 2 >< 4  const       // Measurement matrix
+    arm_matrix_instance_f32 Q; // 4 >< 4  const       // Process noise covariance
+    arm_matrix_instance_f32 R; // 2 >< 2  const       // Measurement noise covariance
+    arm_matrix_instance_f32 B; // 4 >< 2  const       // Control matrix
+    arm_matrix_instance_f32 I; // 4 >< 4  const Identity
+} KalmanState;
 
 typedef struct {
-    arm_matrix_instance_f32 state;      // x: [pitch, roll, bias_wE, bias_wN]
-    arm_matrix_instance_f32 covariance; // P
-    arm_matrix_instance_f32 F;          // State transition matrix
-    arm_matrix_instance_f32 H;          // Measurement matrix
-    arm_matrix_instance_f32 Q;          // Process noise covariance
-    arm_matrix_instance_f32 R;          // Measurement noise covariance
-    arm_matrix_instance_f32 B;          // Control matrix
-    arm_matrix_instance_f32 K;          // Kalman gain
-    arm_matrix_instance_f32 tmp41a;       // Временные матрицы для расчетов
-    arm_matrix_instance_f32 tmp41b;       // Временные матрицы для расчетов
-    arm_matrix_instance_f32 tmp42a;
-    arm_matrix_instance_f32 tmp42b;
-    arm_matrix_instance_f32 tmp24a;
-    arm_matrix_instance_f32 tmp24b;
-    arm_matrix_instance_f32 tmp22a;
-    arm_matrix_instance_f32 tmp22b;
-    arm_matrix_instance_f32 tmp21a;
-    arm_matrix_instance_f32 tmp21b;
-    arm_matrix_instance_f32 tmp44a;
-    arm_matrix_instance_f32 tmp44b;
-    arm_matrix_instance_f32 tmp44c;
-    arm_matrix_instance_f32 identity; // I
+    float32_t vec_X[4];      // x: [pitch, roll, bias_wE, bias_wN]
+    float32_t vec_Z[2];      // x: [measuredPitch, measuredRoll]
+    arm_matrix_instance_f32 P; // 4 >< 4
+    arm_matrix_instance_f32 K; // 4 >< 2        // Kalman gain
+    KalmanState * state;
 } KalmanFilter;
 
-void Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll);
-void Kalman_Predict(KalmanFilter* kf, float32_t dt, float32_t wN, float32_t wE);
-void Kalman_Update(KalmanFilter* kf, float32_t measuredPitch, float32_t measuredRoll);
-void Kalman_GetAngles(KalmanFilter* kf, float32_t* pitch, float32_t* roll);
+
+int Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll);
+// void Kalman_Predict(KalmanFilter* kf, float32_t dt, float32_t wN, float32_t wE);
+// void Kalman_Update(KalmanFilter* kf, float32_t measuredPitch, float32_t measuredRoll);
+// void Kalman_GetAngles(KalmanFilter* kf, float32_t* pitch, float32_t* roll);
 
 #endif
 
