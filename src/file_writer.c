@@ -58,7 +58,7 @@ static DataEntry averageFirstNEntries(const DataCollection* collection, const ui
 
 DataEntry file_writer_title(const FILE* file, const DataCollection* collection) {
     // Записываем заголовок в файл
-    fprintf(file, "Time\tPitchSensor\tRollSensor\tAzimuthSensor\tPitchIIR\tRollIIR\tAzimuthIIR\tPitchKalman\tRollKalman\tAzimuthKalman\n");
+    fprintf(file, "Time\tPitchSensor\tRollSensor\tAzimuthSensor\tPitchKalman\tRollKalman\tAzimuthKalman\tPitchIIR\tRollIIR\tAzimuthIIR\n");
     // Усреднение первых 10 записей
     DataEntry averagedEntry = averageFirstNEntries(collection, MAX_AVERAGE_SAMPLES);
     // Расчет углов на усредненных данных
@@ -67,8 +67,14 @@ DataEntry file_writer_title(const FILE* file, const DataCollection* collection) 
     Angles avg_angles = calculateAngles(&avg_acc);
     float avg_azimuth = calculateAzimuth(avg_angles.pitch, avg_angles.roll, &avg_mag);
     // Записываем результаты в файл
-    fprintf(file, "%6.1f\t%15.10f\t%15.10f\t%15.10f\n", 
+    fprintf(file, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n", 
                 averagedEntry.time, 
+                avg_angles.pitch, 
+                avg_angles.roll, 
+                avg_azimuth,
+                avg_angles.pitch, 
+                avg_angles.roll, 
+                avg_azimuth,
                 avg_angles.pitch, 
                 avg_angles.roll, 
                 avg_azimuth);

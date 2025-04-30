@@ -16,10 +16,19 @@ typedef struct {
     arm_matrix_instance_f32 R;          // Measurement noise covariance
     arm_matrix_instance_f32 B;          // Control matrix
     arm_matrix_instance_f32 K;          // Kalman gain
-    arm_matrix_instance_f32 tmp1;       // Временные матрицы для расчетов
-    arm_matrix_instance_f32 tmp2;
-    arm_matrix_instance_f32 tmp3;
-    arm_matrix_instance_f32 tmp4;
+    arm_matrix_instance_f32 tmp41a;       // Временные матрицы для расчетов
+    arm_matrix_instance_f32 tmp41b;       // Временные матрицы для расчетов
+    arm_matrix_instance_f32 tmp42a;
+    arm_matrix_instance_f32 tmp42b;
+    arm_matrix_instance_f32 tmp24a;
+    arm_matrix_instance_f32 tmp24b;
+    arm_matrix_instance_f32 tmp22a;
+    arm_matrix_instance_f32 tmp22b;
+    arm_matrix_instance_f32 tmp21a;
+    arm_matrix_instance_f32 tmp21b;
+    arm_matrix_instance_f32 tmp44a;
+    arm_matrix_instance_f32 tmp44b;
+    arm_matrix_instance_f32 tmp44c;
     arm_matrix_instance_f32 identity; // I
 } KalmanFilter;
 
