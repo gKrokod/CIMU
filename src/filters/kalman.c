@@ -22,10 +22,10 @@
 /*  */
 
 // make const matrix
-KalmanState MkKalmanState {
- KalmanState ks;
- return ks;
-}
+/* KalmanState MkKalmanState { */
+/*  KalmanState ks; */
+/*  return ks; */
+/* } */
 
 
 int Kalman_Init(KalmanFilter* kf, float32_t initialPitch, float32_t initialRoll){

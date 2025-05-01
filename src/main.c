@@ -8,8 +8,69 @@
 
 #define DELTA_TT 0.04f
 
+// Объявление массива для матрицы F размером 4x4
+static const float32_t F_data[16] = {
+      1.0f, 0.0f,  (-DELTA_TT),   0.0f,
+      0.0f,  1.0f, 0.0f,   (-DELTA_TT),
+      0.0f,  0.0f,  1.0f, 0.0f,
+      0.0f,  0.0f,  0.0f,   1.0f
+    };
+
+// Объявление массива для матрицы R размером 2x2
+static const float32_t R_data[4] = {
+        0.0007f, 0.0f,
+        0.0f,    0.0009f
+};
+
+// Объявление матрицы F размером 4x4
+static const arm_matrix_instance_f32 F = {4, 4, (float32_t *)F_data};
+// Объявление матрицы R размером 2x2
+static const arm_matrix_instance_f32 R = {2, 2, (float32_t *)R_data};
+
+typedef struct {
+    // Матрицы, которые не изменяются
+    const arm_matrix_instance_f32 *F;  // Матрица динамики системы
+    const arm_matrix_instance_f32 *R;  // Матрица ковариации шума измерения
+    
+} KalmanFilter_t;
+
+void kalman_init(KalmanFilter_t *kf) {
+    // Присваиваем указатели на статические матрицы
+    kf->F = &F;
+    kf->R = &R;
+}
+
+
 int main() {
+    KalmanFilter_t kf;
+    kalman_init(&kf);
+    //
+    printf("Kalman Test\n");
+    print_matrix(kf.F, "F");
+    print_matrix(kf.R, "R");
+
+    float32_t input_data[2] = {1.0f, 2.0f}; // Пример входных данных
+    float32_t result_data[2] = {0};
+
+    arm_matrix_instance_f32 input_vec = {2, 1, input_data};
+    arm_matrix_instance_f32 result = {2, 1, result_data};
+
+    // Умножение матрицы на вектор
+    arm_status status = arm_mat_mult_f32(&R, &input_vec, &result);
+    /* arm_status status = arm_mat_mult_f32(&R, &input_vec, &result); */
+   
+    if(status == ARM_MATH_SUCCESS) {
+            printf("SSUCESS");}
+    else { printf("Fail \n"); return -1;}
+
+    printf("Результат умножения R * [");
+    /* print_vector(input_data, 2); */
+    printf("]:\n");
+    /* print_vector(result.pData, 2); */
+    print_matrix(&result);
+
     // Инициализация коллекции данных
+    //
     printf("startNEW\n");
     DataCollection dataCollection;
     initDataCollection(&dataCollection, 10); // Начальная емкость 10
@@ -96,4 +157,22 @@ int main() {
     // Освобождаем память
     freeDataCollection(&dataCollection);
     return 0;
+}
+
+void print_matrix(const arm_matrix_instance_f32 *m, const char *name) {
+    printf("Matrix %s (%dx%d):\n", name, m->numRows, m->numCols);
+    for (uint16_t i = 0; i < m->numRows; ++i) {
+        for (uint16_t j = 0; j < m->numCols; ++j) {
+            printf("%10.6f ", m->pData[i * m->numCols + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void print_vector(const float32_t *vec, uint32_t size) {
+    for(uint32_t i = 0; i < size; ++i) {
+        printf("%10.6f ", vec[i]);
+    }
+    printf("\n");
 }
