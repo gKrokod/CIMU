@@ -1,7 +1,7 @@
 #include "filters/kalman.h"
 #include <math.h>
 
-#define DELTA_T 0.04f
+/* #define DELTA_T 0.04f */
 
 /* typedef struct { */
 /*     arm_matrix_instance_f32 F; // 4 >< 4  const       // State transition matrix */
