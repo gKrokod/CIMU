@@ -8,6 +8,23 @@
 
 #define DELTA_T 0.04f
 
+void print_matrix(const arm_matrix_instance_f32 *m, const char *name) {
+    printf("Matrix %s (%dx%d):\n", name, m->numRows, m->numCols);
+    for (uint16_t i = 0; i < m->numRows; ++i) {
+        for (uint16_t j = 0; j < m->numCols; ++j) {
+            printf("%10.10f ", m->pData[i * m->numCols + j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void print_vector(const float32_t *vec, uint32_t size) {
+    for(uint32_t i = 0; i < size; ++i) {
+        printf("%10.6f ", vec[i]);
+    }
+    printf("\n");
+}
 // Объявление массива для матрицы F размером 4x4
 static const float32_t F_data[16] = {
       1.0f, 0.0f,  (-DELTA_T),   0.0f,
@@ -64,8 +81,9 @@ static float32_t K_data[8] = { // 4 <> 2
     0.0f,  0.0f,
     0.0f,  0.0f
 };
-static float32_t X_data[4] = {10.0f, 20.0f, 30.0f, 40.0f}; // [pitch, roll, bias_wE, bias_wN] 
-static float32_t Z_data[2] = {0.0f, 20.0f}; // [measuredPitch, measuredRoll] 
+static float32_t X_data[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // [pitch, roll, bias_wE, bias_wN] [rad, rad, rad/s, ras/s]
+static float32_t Z_data[2] = {0.0f, 0.0f}; // [measuredPitch, measuredRoll] [rad, rad] 
+static float32_t U_data[2] = {0.0f, 0.0f}; // [gyro WN, gyro WE] [rad/s, rad/s] 
 // Объявление матрицы F размером 4x4
 static const arm_matrix_instance_f32 F = {4, 4, (float32_t *)F_data};
 // Объявление матрицы R размером 2x2
@@ -97,10 +115,11 @@ typedef struct {
     // Vectors, которые изменяются
     float32_t *vec_X;
     float32_t *vec_Z;
+    float32_t *vec_U;
     
 } KalmanFilter_t;
 
-void kalman_init(KalmanFilter_t *kf) {
+void kalman_init(KalmanFilter_t *kf, float32_t pitch, float32_t roll) {
     // Присваиваем указатели на статические матрицы
     kf->F = &F;
     kf->B = &B;
@@ -109,49 +128,23 @@ void kalman_init(KalmanFilter_t *kf) {
     kf->R = &R;
     kf->I = &I;
     kf->P = &P;
+    X_data[0] = pitch;
+    X_data[1] = roll;
+    X_data[2] = 0;
+    X_data[3] = 0;
     kf->vec_X = X_data;
     kf->vec_Z = Z_data;
+    kf->vec_U = U_data;
 }
 
 
 int main() {
-    KalmanFilter_t kf;
-    kalman_init(&kf);
     //
     printf("Kalman Test\n");
     /* print_matrix(kf.F, "F"); */
     /* print_matrix(kf.I, "I"); */
     /* print_matrix(kf.P, "P"); */
     /* print_vector(kf.vec_X, 4); */
-
-    float32_t input_data[2] = {1.0f, 2.0f}; // Пример входных данных
-    float32_t result_data[2] = {0};
-    float32_t fq_data[16] = {0};
-
-    arm_matrix_instance_f32 input_vec = {2, 1, input_data};
-    arm_matrix_instance_f32 result = {2, 1, result_data};
-    arm_matrix_instance_f32 fq = {4, 4, fq_data};
-
-    // Умножение матрицы 
-    arm_mat_mult_f32(&R, &input_vec, &result);
-    // Умножение матрицы на вектор
-    arm_mat_mult_f32(kf.F, kf.P, &fq);
-
-    print_matrix(kf.R, "R");
-    print_vector(kf.vec_Z, 2);
-
-    float32_t result_dat[2] = {0};
-    arm_mat_vec_mult_f32(kf.R, kf.vec_Z, &result_dat);
-    printf("result mult on vec\n");
-    print_vector(&result_dat, 2);
-
-    print_matrix(kf.F, "F");
-    print_vector(kf.vec_X, 4);
-
-    float32_t result_da[4] = {0};
-    arm_mat_vec_mult_f32(kf.F, kf.vec_X, &result_da);
-    printf("result mult on vec\n");
-    print_vector(&result_da, 4);
 
     // Инициализация коллекции данных
     //
@@ -170,13 +163,38 @@ int main() {
     initialFilter (&iir, &dataAverage);
 
     /* KalmanFilter kf; //  */
-    /* Acceleration avg_acc = convertToAcceleration(&dataAverage); */
-    /* Mag avg_mag = convertToMag(&dataAverage); */
-    /* Angles avg_angles = calculateAngles(&avg_acc); */
-    /* #<{(|  |)}># */
-    /* Kalman_Init(&kf, avg_angles.pitch, avg_angles.roll); */
-    /*  */
+    Acceleration avg_acc = convertToAcceleration(&dataAverage);
+    Mag avg_mag = convertToMag(&dataAverage);
+    Angles avg_angles = calculateAngles(&avg_acc);
+    KalmanFilter_t kf;
+    kalman_init(&kf, DEG_TO_RAD * avg_angles.pitch, DEG_TO_RAD * avg_angles.roll);
 
+    /* float32_t temp[16] = {0}; */
+    /* arm_matrix_instance_f32 transpose = {4, 4, temp}; */
+    /* print_matrix(kf.F, "F"); */
+    /* arm_mat_trans_f32(kf.F,&transpose); */
+    /* print_matrix(&transpose, "FT"); */
+
+    /* float32_t fx[4] = {0}; */
+    /* arm_mat_vec_mult_f32(kf.F, kf.vec_X, fx); */
+    /* print_vector(fx, 4); */
+    /* float32_t bu[4] = {0}; */
+    /* arm_mat_vec_mult_f32(kf.B, kf.vec_U, bu); */
+    /* print_vector(bu, 4); */
+    /* float32_t xpred[4] = {0}; */
+    /* arm_add_f32(fx, bu, xpred,4); */
+    /* print_vector(xpred, 4); */
+
+    /* float32_t fx[4] = {0}; */
+    /* print_matrix(kf.F, "F"); */
+    /* print_vector(kf.vec_X, 4); */
+    /* arm_mat_vec_mult_f32(kf.F, kf.vec_X, fx); */
+    /* print_vector(fx, 4); */
+    /* kf.vec_Z[0] = 1; */
+    /* printf("%4.4f\n",kf.vec_Z[0]); */
+    /* kf.vec_Z[0] = 2; */
+    /* printf("%4.4f\n",kf.vec_Z[0]); */
+    printf("\n:");
     // Для каждой строки входного файла выполняем расчеты и записываем в файл
     for (int i = MAX_AVERAGE_SAMPLES; i < dataCollection.count; i++) {
       // сырые данные
@@ -193,45 +211,54 @@ int main() {
         float32_t iir_azimuth = calculateAzimuth(iir_pitchRoll.pitch, iir_pitchRoll.roll, &iir_mag);
         
 // Kalman фильтр
-        /* float32_t kalman_pitch, kalman_roll; */
-        /* Kalman_GetAngles(&kf, &kalman_pitch, &kalman_roll); */
-        /* #<{(| printf("%.2f %.2f \t ", kalman_pitch, kalman_roll); |)}># */
-        /*  */
-        /* const float32_t sin_tettha, cos_tettha; */
-        /* arm_sin_cos_f32(kalman_pitch, &sin_tettha, &cos_tettha); */
-        /* const float32_t sin_phi, cos_phi; */
-        /* arm_sin_cos_f32(kalman_roll, &sin_phi, &cos_phi); */
-        /*  */
-        /* Gyro gyro = convertToGyro(&dataCollection.entries[i]); */
-        /*  */
-        /* float32_t wE = gyro.y * cos_phi - gyro.z * sin_phi; // градус в секунду */
-        /* float32_t wN = gyro.x * cos_tettha + sin_tettha * (gyro.z * cos_phi + gyro.y * sin_phi); // градус в секунду */
+        float32_t sin_tettha, cos_tettha;
+        arm_sin_cos_f32(RAD_TO_DEG * kf.vec_X[0], &sin_tettha, &cos_tettha);
+        float32_t sin_phi, cos_phi;
+        arm_sin_cos_f32(RAD_TO_DEG * kf.vec_X[1], &sin_phi, &cos_phi);
+        Gyro gyro = convertToGyro(&dataCollection.entries[i]);
 
-        /* printf("we and wn : %.2f %.2f\t ", wE, wN); */
-        /* printf("%.2f %.2f  %.2f\n", gyro.x, gyro.y, gyro.z); */
-        /* // Прогноз Калмана */
-        /* Kalman_Predict(&kf, DELTA_TT, wN, wE); */
-        /*  */
-        /* // Обновление Калмана */
-        /* Kalman_Update(&kf, pitchRoll.pitch, pitchRoll.roll); */
-        /*  */
-        /* // Получение отфильтрованных углов */
-        /* Kalman_GetAngles(&kf, &kalman_pitch, &kalman_roll); */
+        kf.vec_U[0] = DEG_TO_RAD * (gyro.x * cos_tettha + sin_tettha * (gyro.z * cos_phi + gyro.y * sin_phi)); // градус в секунду
+        kf.vec_U[1] = DEG_TO_RAD * (gyro.y * cos_phi - gyro.z * sin_phi); // градус в секунду
+        
+        // -- Шаг предсказания DONE
+        /* x_pred = f #> x + b #> wNED */
+        float32_t fx[4] = {0};
+        arm_mat_vec_mult_f32(kf.F, kf.vec_X, fx);
+        float32_t bu[4] = {0};
+        arm_mat_vec_mult_f32(kf.B, kf.vec_U, bu);
+        float32_t xpred[4] = {0};
+        arm_add_f32(fx, bu, xpred, 4);
+        /* p_pred = f <> p <> tr f + q */
 
-        /* float32_t kalman_azimuth = calculateAzimuth(kalman_pitch, kalman_roll, &iir_mag); */
+        float32_t temp[16] = {0};
+        arm_matrix_instance_f32 F_T = {4, 4, temp};
+        arm_mat_trans_f32(kf.F,&F_T);
+
+        //todo F . P . F_T + Q
+        /*  */
+        /* -- Шаг обновления */
+        /* z = vector [measuredPitch, measuredRoll] -- тут надо в радианах давать */
+        /* y = z - (h #> x_pred)  -- Невязка */
+        /* s = (h <> p_pred <> tr h) + r'  -- Ковариация невязки */
+        /* k = p_pred <> tr h <> inv s  -- Коэффициент Калмана */
+        /* x_upd = x_pred + k #> y  -- Обновленная оценка состояния */
+        /* i_kh = ident 4 - (k <> h)  -- I - KH */
+        /* p_upd = i_kh <> p_pred  -- Обновленная ковариационная матрица */
+
+        float32_t kalman_azimuth = calculateAzimuth(RAD_TO_DEG * kf.vec_X[0], RAD_TO_DEG * kf.vec_X[1], &iir_mag);
         /* printf(" :: %.2f %.2f \n ", kalman_pitch, kalman_roll); */
 
-        /* fprintf(outputFile, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n", */
-        /*         dataCollection.entries[i].time, */
-        /*         pitchRoll.pitch, */
-        /*         pitchRoll.roll, */
-        /*         azimuth, */
-        /*         kalman_pitch, */
-        /*         kalman_roll, */
-        /*         kalman_azimuth, */
-        /*         iir_pitchRoll.pitch, */
-        /*         iir_pitchRoll.roll, */
-        /*         iir_azimuth); */
+        fprintf(outputFile, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n",
+                dataCollection.entries[i].time,
+                pitchRoll.pitch,
+                pitchRoll.roll,
+                azimuth,
+                RAD_TO_DEG * kf.vec_X[0],
+                RAD_TO_DEG * kf.vec_X[1],
+                kalman_azimuth,
+                iir_pitchRoll.pitch,
+                iir_pitchRoll.roll,
+                iir_azimuth);
 
     }
     // Закрываем файл
@@ -241,22 +268,4 @@ int main() {
     // Освобождаем память
     freeDataCollection(&dataCollection);
     return 0;
-}
-
-void print_matrix(const arm_matrix_instance_f32 *m, const char *name) {
-    printf("Matrix %s (%dx%d):\n", name, m->numRows, m->numCols);
-    for (uint16_t i = 0; i < m->numRows; ++i) {
-        for (uint16_t j = 0; j < m->numCols; ++j) {
-            printf("%10.10f ", m->pData[i * m->numCols + j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-
-void print_vector(const float32_t *vec, uint32_t size) {
-    for(uint32_t i = 0; i < size; ++i) {
-        printf("%10.6f ", vec[i]);
-    }
-    printf("\n");
 }

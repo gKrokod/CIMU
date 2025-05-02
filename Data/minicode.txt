@@ -173,4 +173,35 @@ void print_vector(const float32_t *vec, uint32_t size) {
         printf("%10.6f ", vec[i]);
     }
     printf("\n");
+
+----- new, ptr
 }
+    float32_t input_data[2] = {1.0f, 2.0f}; // Пример входных данных
+    float32_t result_data[2] = {0.0f,0.0f};
+    float32_t fq_data[16] = {0};
+
+    arm_matrix_instance_f32 input_vec = {2, 1, input_data};
+    arm_matrix_instance_f32 result = {2, 1, result_data};
+    arm_matrix_instance_f32 fq = {4, 4, fq_data};
+
+    // Умножение матрицы 
+    arm_mat_mult_f32(&R, &input_vec, &result);
+    // Умножение матрицы на вектор
+    arm_mat_mult_f32(kf.F, kf.P, &fq);
+
+    print_matrix(kf.R, "R");
+    print_vector(kf.vec_Z, 2);
+
+    float32_t result_dat[2] = {0.0f,0.0f};
+
+    arm_mat_vec_mult_f32(kf.R, kf.vec_Z, result_dat);
+    printf("result mult on vec\n");
+    print_vector(result_dat, 2);
+
+    print_matrix(kf.F, "F");
+    print_vector(kf.vec_X, 4);
+
+    float32_t result_da[4] = {0};
+    arm_mat_vec_mult_f32(kf.F, kf.vec_X, result_da);
+    printf("result mult on vec\n");
+    print_vector(result_da, 4);
