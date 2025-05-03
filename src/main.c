@@ -169,131 +169,266 @@ int main() {
     printf("%0.6f  %0.6f \n",avg_angles.pitch, avg_angles.roll);
 
     printf("\n");
-    // Для каждой строки входного файла выполняем расчеты и записываем в файл
-    for (int i = MAX_AVERAGE_SAMPLES; i < dataCollection.count; i++) {
-      // сырые данные
-        Mag mag = convertToMag(&dataCollection.entries[i]);
-        Acceleration acc = convertToAcceleration(&dataCollection.entries[i]);
-        Angles pitchRoll = calculateAngles(&acc);
-        float32_t azimuth = calculateAzimuth(pitchRoll.pitch, pitchRoll.roll, &mag);
-        
+  // сырые данные
+    Mag mag = convertToMag(&dataCollection.entries[MAX_AVERAGE_SAMPLES]);
+    Acceleration acc = convertToAcceleration(&dataCollection.entries[MAX_AVERAGE_SAMPLES]);
+    Angles pitchRoll = calculateAngles(&acc);
+    float32_t azimuth = calculateAzimuth(pitchRoll.pitch, pitchRoll.roll, &mag);
+    
 // iir фильтр
-        DataEntry data_i = filterStep (&iir,&dataCollection.entries[i]);
-        Mag iir_mag = convertToMag(&data_i);
-        Acceleration iir_acc = convertToAcceleration(&data_i);
-        Angles iir_pitchRoll = calculateAngles(&iir_acc);
-        float32_t iir_azimuth = calculateAzimuth(iir_pitchRoll.pitch, iir_pitchRoll.roll, &iir_mag);
-        
+    DataEntry data_i = filterStep (&iir,&dataCollection.entries[MAX_AVERAGE_SAMPLES]);
+    Mag iir_mag = convertToMag(&data_i);
+    Acceleration iir_acc = convertToAcceleration(&data_i);
+    Angles iir_pitchRoll = calculateAngles(&iir_acc);
+    float32_t iir_azimuth = calculateAzimuth(iir_pitchRoll.pitch, iir_pitchRoll.roll, &iir_mag);
+    
 // Kalman фильтр
-        float32_t sin_tettha, cos_tettha;
-        arm_sin_cos_f32(RAD_TO_DEG * kf.vec_X[0], &sin_tettha, &cos_tettha);
-        float32_t sin_phi, cos_phi;
-        arm_sin_cos_f32(RAD_TO_DEG * kf.vec_X[1], &sin_phi, &cos_phi);
-        Gyro gyro = convertToGyro(&dataCollection.entries[i]);
+    float32_t sin_tettha, cos_tettha;
+    arm_sin_cos_f32(RAD_TO_DEG * kf.vec_X[0], &sin_tettha, &cos_tettha);
+    float32_t sin_phi, cos_phi;
+    arm_sin_cos_f32(RAD_TO_DEG * kf.vec_X[1], &sin_phi, &cos_phi);
+    Gyro gyro = convertToGyro(&dataCollection.entries[MAX_AVERAGE_SAMPLES]);
 
-        // -- Control from gyro
-        kf.vec_U[0] = DEG_TO_RAD * (gyro.x * cos_tettha + sin_tettha * (gyro.z * cos_phi + gyro.y * sin_phi)); 
-        kf.vec_U[1] = DEG_TO_RAD * (gyro.y * cos_phi - gyro.z * sin_phi);
-        
-        // -- Шаг предсказания DONE
-        /* x_pred = f #> x + b #> u */
-        float32_t fx[4] = {0};
-        arm_mat_vec_mult_f32(kf.F, kf.vec_X, fx);
-        float32_t bu[4] = {0};
-        arm_mat_vec_mult_f32(kf.B, kf.vec_U, bu);
-        float32_t xpred[4] = {0};
-        arm_add_f32(fx, bu, xpred, 4);
-        /* p_pred = f <> p <> tr f + q */
-        // F_T
-        float32_t tempFT[16] = {0};
-        arm_matrix_instance_f32 F_T = {4, 4, tempFT};
-        arm_mat_trans_f32(kf.F,&F_T);
-        // F <> P
-        float32_t tempFP[16] = {0};
-        arm_matrix_instance_f32 F_P = {4, 4, tempFP};
-        arm_mat_mult_f32(kf.F, kf.P, &F_P);
-        // F <> P <> F_T
-        float32_t tempFPFT[16] = {0};
-        arm_matrix_instance_f32 F_P_FT = {4, 4, tempFPFT};
-        arm_mat_mult_f32(&F_P, &F_T, &F_P_FT);
-        // p_pred = f <> p <> tr f + q 
-        float32_t tempPpred[16] = {0};
-        arm_matrix_instance_f32 P_pred = {4, 4, tempPpred};
-        arm_mat_add_f32(&F_P_FT, kf.Q, &P_pred);
-        //
-        /* -- Шаг обновления */
-        /* z = vector [measuredPitch, measuredRoll] -- тут надо в радианах давать */
-        kf.vec_Z[0] = DEG_TO_RAD * pitchRoll.pitch;
-        kf.vec_Z[1] = DEG_TO_RAD * pitchRoll.roll;
-        // print_vector(kf.vec_Z, 2);
-        /* y = z - (h #> x_pred)  -- Невязка */
-        float32_t hx[2] = {0};
-        arm_mat_vec_mult_f32(kf.H, kf.vec_X, hx);
-        float32_t vec_Y[2] = {0};
-        arm_sub_f32(kf.vec_Z, hx, vec_Y, 2);
-        /* s = (h <> p_pred <> tr h) + r'  -- Ковариация невязки */
-        // H_T
-        float32_t tempHT[8] = {0};
-        arm_matrix_instance_f32 H_T = {4, 2, tempHT};
-        arm_mat_trans_f32(kf.H,&H_T);
-        // H <> P_pred
-        float32_t tempHPpred[8] = {0};
-        arm_matrix_instance_f32 H_Ppred = {2, 4, tempHPpred};
-        arm_mat_mult_f32(kf.H, &P_pred, &H_Ppred);
-        // H <> P_pred <> H_T
-        float32_t tempHPpHT[4] = {0};
-        arm_matrix_instance_f32 H_Ppred_HT = {2, 2, tempHPpHT};
-        arm_mat_mult_f32(&H_Ppred, &H_T, &H_Ppred_HT);
-        // s = (h <> p_pred <> tr h) + r'  -- Ковариация невязки 
-        float32_t tempS[4] = {0};
-        arm_matrix_instance_f32 S = {2, 2, tempS};
-        arm_mat_add_f32(&H_Ppred_HT, kf.R, &S);
-        /* k = p_pred <> tr h <> inv s  -- Коэффициент Калмана */
-        // inv_S
-        float32_t tempIS[4] = {0};
-        arm_matrix_instance_f32 I_S = {2, 2, tempIS};
-        arm_mat_inverse_f32(&S,&I_S);
-        // P_pred <> tr h
-        float32_t tempPpredHT[8] = {0};
-        arm_matrix_instance_f32 Ppred_HT = {4, 2, tempPpredHT};
-        arm_mat_mult_f32(&P_pred, &H_T, &Ppred_HT);
-        // k = p_pred <> tr h <> inv s
-        arm_mat_mult_f32(&Ppred_HT, &I_S, kf.K);
-        /* x_upd = x_pred + k #> y  -- Обновленная оценка состояния */
-        float32_t ky[4] = {0};
+    // -- Control from gyro
+    kf.vec_U[0] = DEG_TO_RAD * (gyro.x * cos_tettha + sin_tettha * (gyro.z * cos_phi + gyro.y * sin_phi) );
+    kf.vec_U[1] = DEG_TO_RAD * (gyro.y * cos_phi - gyro.z * sin_phi);
 
-        arm_mat_vec_mult_f32(kf.K, vec_Y, ky);
-        arm_add_f32(xpred, ky, kf.vec_X, 4);
+    /* printf("GYRO: %0.6f  %0.6f  %0.6f\n", gyro.x, gyro.y, gyro.z);  */
+    /* printf("Tettha and PHI: %0.6f  %0.6f\n", kf.vec_X[0], kf.vec_X[1]);  */
+    /* printf("Sin Tettha and Cos Tettha: %0.6f  %0.6f\n", sin_tettha, cos_tettha);  */
+    /* printf("Sin Phi and Cos Phi: %0.6f  %0.6f\n", sin_phi, cos_phi);  */
+    
+    // -- Шаг предсказания DONE
+    /* x_pred = f #> x + b #> u */
+    float32_t fx[4] = {0};
+    arm_mat_vec_mult_f32(kf.F, kf.vec_X, fx);
+    float32_t bu[4] = {0};
+    arm_mat_vec_mult_f32(kf.B, kf.vec_U, bu);
+    float32_t xpred[4] = {0};
+    arm_add_f32(fx, bu, xpred, 4);
+     print_vector(xpred,4);
+     /* print_vector(bu,4); */
+     /* print_vector(kf.vec_U,2); */
 
-        /* i_kh = ident 4 - (k <> h)  -- I - KH */
-        float32_t tempKH[16] = {0};
-        arm_matrix_instance_f32 K_H = {4, 4, tempKH};
-        arm_mat_mult_f32(kf.K, kf.H, &K_H);
-        float32_t tempIKH[16] = {0};
-        arm_matrix_instance_f32 I_K_H = {4, 4, tempIKH};
-        arm_mat_sub_f32(kf.I, &K_H, &I_K_H);
-        /* p_upd = i_kh <> p_pred  -- Обновленная ковариационная матрица */
-        arm_mat_mult_f32(&I_K_H, &P_pred, kf.P);
 
-        float32_t kalman_azimuth = calculateAzimuth(RAD_TO_DEG * kf.vec_X[0], RAD_TO_DEG * kf.vec_X[1], &iir_mag);
-        /* printf(" :: %.2f %.2f \n ", kalman_pitch, kalman_roll); */
+    /* p_pred = f <> p <> tr f + q */
+    // F_T
+    float32_t tempFT[16] = {0};
+    arm_matrix_instance_f32 F_T = {4, 4, tempFT};
+    arm_mat_trans_f32(kf.F,&F_T);
+    // F <> P
+    float32_t tempFP[16] = {0};
+    arm_matrix_instance_f32 F_P = {4, 4, tempFP};
+    arm_mat_mult_f32(kf.F, kf.P, &F_P);
+    // F <> P <> F_T
+    float32_t tempFPFT[16] = {0};
+    arm_matrix_instance_f32 F_P_FT = {4, 4, tempFPFT};
+    arm_mat_mult_f32(&F_P, &F_T, &F_P_FT);
+    // p_pred = f <> p <> tr f + q 
+    float32_t tempPpred[16] = {0};
+    arm_matrix_instance_f32 P_pred = {4, 4, tempPpred};
+    arm_mat_add_f32(&F_P_FT, kf.Q, &P_pred);
+    print_matrix(&P_pred, "Pp");
+    //
+    /* -- Шаг обновления */
+    /* z = vector [measuredPitch, measuredRoll] -- тут надо в радианах давать */
+    kf.vec_Z[0] = DEG_TO_RAD * pitchRoll.pitch;
+    kf.vec_Z[1] = DEG_TO_RAD * pitchRoll.roll;
+    print_vector(kf.vec_Z, 2);
+    /* y = z - (h #> x_pred)  -- Невязка */
+    float32_t hx[2] = {0};
+    arm_mat_vec_mult_f32(kf.H, xpred, hx);
+    float32_t vec_Y[2] = {0};
+    arm_sub_f32(kf.vec_Z, hx, vec_Y, 2);
+    print_vector(vec_Y, 2);
 
-        fprintf(outputFile, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n",
-                dataCollection.entries[i].time,
-                pitchRoll.pitch,
-                pitchRoll.roll,
-                azimuth,
-                RAD_TO_DEG * kf.vec_X[0],
-                RAD_TO_DEG * kf.vec_X[1],
-                kalman_azimuth,
-                iir_pitchRoll.pitch,
-                iir_pitchRoll.roll,
-                iir_azimuth);
+    /* s = (h <> p_pred <> tr h) + r'  -- Ковариация невязки */
+    // H_T
+    float32_t tempHT[8] = {0};
+    arm_matrix_instance_f32 H_T = {4, 2, tempHT};
+    arm_mat_trans_f32(kf.H,&H_T);
+    // H <> P_pred
+    float32_t tempHPpred[8] = {0};
+    arm_matrix_instance_f32 H_Ppred = {2, 4, tempHPpred};
+    arm_mat_mult_f32(kf.H, &P_pred, &H_Ppred);
+    // H <> P_pred <> H_T
+    float32_t tempHPpHT[4] = {0};
+    arm_matrix_instance_f32 H_Ppred_HT = {2, 2, tempHPpHT};
+    arm_mat_mult_f32(&H_Ppred, &H_T, &H_Ppred_HT);
+    // s = (h <> p_pred <> tr h) + r'  -- Ковариация невязки 
+    float32_t tempS[4] = {0};
+    arm_matrix_instance_f32 S = {2, 2, tempS};
+    arm_mat_add_f32(&H_Ppred_HT, kf.R, &S);
+    /* k = p_pred <> tr h <> inv s  -- Коэффициент Калмана */
+    // inv_S
+    float32_t tempIS[4] = {0};
+    arm_matrix_instance_f32 I_S = {2, 2, tempIS};
+    arm_mat_inverse_f32(&S,&I_S);
+    // P_pred <> tr h
+    float32_t tempPpredHT[8] = {0};
+    arm_matrix_instance_f32 Ppred_HT = {4, 2, tempPpredHT};
+    arm_mat_mult_f32(&P_pred, &H_T, &Ppred_HT);
+    // k = p_pred <> tr h <> inv s
+    arm_mat_mult_f32(&Ppred_HT, &I_S, kf.K);
+    /* x_upd = x_pred + k #> y  -- Обновленная оценка состояния */
+    float32_t ky[4] = {0};
 
-    }
+    arm_mat_vec_mult_f32(kf.K, vec_Y, ky);
+    arm_add_f32(xpred, ky, kf.vec_X, 4);
+
+    /* i_kh = ident 4 - (k <> h)  -- I - KH */
+    float32_t tempKH[16] = {0};
+    arm_matrix_instance_f32 K_H = {4, 4, tempKH};
+    arm_mat_mult_f32(kf.K, kf.H, &K_H);
+    float32_t tempIKH[16] = {0};
+    arm_matrix_instance_f32 I_K_H = {4, 4, tempIKH};
+    arm_mat_sub_f32(kf.I, &K_H, &I_K_H);
+    /* p_upd = i_kh <> p_pred  -- Обновленная ковариационная матрица */
+    arm_mat_mult_f32(&I_K_H, &P_pred, kf.P);
+
+    float32_t kalman_azimuth = calculateAzimuth(RAD_TO_DEG * kf.vec_X[0], RAD_TO_DEG * kf.vec_X[1], &iir_mag);
+    /* printf(" :: %.2f %.2f \n ", kalman_pitch, kalman_roll); */
+
+    printf("%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n",
+            dataCollection.entries[MAX_AVERAGE_SAMPLES].time,
+            pitchRoll.pitch,
+            pitchRoll.roll,
+            azimuth,
+            RAD_TO_DEG * xpred[0],
+            RAD_TO_DEG * xpred[1],
+            /* RAD_TO_DEG * kf.vec_X[0], */
+            /* RAD_TO_DEG * kf.vec_X[1], */
+            kalman_azimuth,
+            iir_pitchRoll.pitch,
+            iir_pitchRoll.roll,
+            iir_azimuth);
+
+    
+    // Для каждой строки входного файла выполняем расчеты и записываем в файл
+/*     for (int i = MAX_AVERAGE_SAMPLES; i < dataCollection.count; i++) { */
+/*       // сырые данные */
+/*         Mag mag = convertToMag(&dataCollection.entries[i]); */
+/*         Acceleration acc = convertToAcceleration(&dataCollection.entries[i]); */
+/*         Angles pitchRoll = calculateAngles(&acc); */
+/*         float32_t azimuth = calculateAzimuth(pitchRoll.pitch, pitchRoll.roll, &mag); */
+/*          */
+/* // iir фильтр */
+/*         DataEntry data_i = filterStep (&iir,&dataCollection.entries[i]); */
+/*         Mag iir_mag = convertToMag(&data_i); */
+/*         Acceleration iir_acc = convertToAcceleration(&data_i); */
+/*         Angles iir_pitchRoll = calculateAngles(&iir_acc); */
+/*         float32_t iir_azimuth = calculateAzimuth(iir_pitchRoll.pitch, iir_pitchRoll.roll, &iir_mag); */
+/*          */
+/* // Kalman фильтр */
+/*         float32_t sin_tettha, cos_tettha; */
+/*         arm_sin_cos_f32(RAD_TO_DEG * kf.vec_X[0], &sin_tettha, &cos_tettha); */
+/*         float32_t sin_phi, cos_phi; */
+/*         arm_sin_cos_f32(RAD_TO_DEG * kf.vec_X[1], &sin_phi, &cos_phi); */
+/*         Gyro gyro = convertToGyro(&dataCollection.entries[i]); */
+/*  */
+/*         // -- Control from gyro */
+/*         kf.vec_U[0] = DEG_TO_RAD * (gyro.x * cos_tettha + sin_tettha * (gyro.z * cos_phi + gyro.y * sin_phi));  */
+/*         kf.vec_U[1] = DEG_TO_RAD * (gyro.y * cos_phi - gyro.z * sin_phi); */
+/*          */
+/*         // -- Шаг предсказания DONE */
+/*         #<{(| x_pred = f #> x + b #> u |)}># */
+/*         float32_t fx[4] = {0}; */
+/*         arm_mat_vec_mult_f32(kf.F, kf.vec_X, fx); */
+/*         float32_t bu[4] = {0}; */
+/*         arm_mat_vec_mult_f32(kf.B, kf.vec_U, bu); */
+/*         float32_t xpred[4] = {0}; */
+/*         arm_add_f32(fx, bu, xpred, 4); */
+/*         #<{(| p_pred = f <> p <> tr f + q |)}># */
+/*         // F_T */
+/*         float32_t tempFT[16] = {0}; */
+/*         arm_matrix_instance_f32 F_T = {4, 4, tempFT}; */
+/*         arm_mat_trans_f32(kf.F,&F_T); */
+/*         // F <> P */
+/*         float32_t tempFP[16] = {0}; */
+/*         arm_matrix_instance_f32 F_P = {4, 4, tempFP}; */
+/*         arm_mat_mult_f32(kf.F, kf.P, &F_P); */
+/*         // F <> P <> F_T */
+/*         float32_t tempFPFT[16] = {0}; */
+/*         arm_matrix_instance_f32 F_P_FT = {4, 4, tempFPFT}; */
+/*         arm_mat_mult_f32(&F_P, &F_T, &F_P_FT); */
+/*         // p_pred = f <> p <> tr f + q  */
+/*         float32_t tempPpred[16] = {0}; */
+/*         arm_matrix_instance_f32 P_pred = {4, 4, tempPpred}; */
+/*         arm_mat_add_f32(&F_P_FT, kf.Q, &P_pred); */
+/*         // */
+/*         #<{(| -- Шаг обновления |)}># */
+/*         #<{(| z = vector [measuredPitch, measuredRoll] -- тут надо в радианах давать |)}># */
+/*         kf.vec_Z[0] = DEG_TO_RAD * pitchRoll.pitch; */
+/*         kf.vec_Z[1] = DEG_TO_RAD * pitchRoll.roll; */
+/*         // print_vector(kf.vec_Z, 2); */
+/*         #<{(| y = z - (h #> x_pred)  -- Невязка |)}># */
+/*         float32_t hx[2] = {0}; */
+/*         arm_mat_vec_mult_f32(kf.H, kf.vec_X, hx); */
+/*         float32_t vec_Y[2] = {0}; */
+/*         arm_sub_f32(kf.vec_Z, hx, vec_Y, 2); */
+/*         #<{(| s = (h <> p_pred <> tr h) + r'  -- Ковариация невязки |)}># */
+/*         // H_T */
+/*         float32_t tempHT[8] = {0}; */
+/*         arm_matrix_instance_f32 H_T = {4, 2, tempHT}; */
+/*         arm_mat_trans_f32(kf.H,&H_T); */
+/*         // H <> P_pred */
+/*         float32_t tempHPpred[8] = {0}; */
+/*         arm_matrix_instance_f32 H_Ppred = {2, 4, tempHPpred}; */
+/*         arm_mat_mult_f32(kf.H, &P_pred, &H_Ppred); */
+/*         // H <> P_pred <> H_T */
+/*         float32_t tempHPpHT[4] = {0}; */
+/*         arm_matrix_instance_f32 H_Ppred_HT = {2, 2, tempHPpHT}; */
+/*         arm_mat_mult_f32(&H_Ppred, &H_T, &H_Ppred_HT); */
+/*         // s = (h <> p_pred <> tr h) + r'  -- Ковариация невязки  */
+/*         float32_t tempS[4] = {0}; */
+/*         arm_matrix_instance_f32 S = {2, 2, tempS}; */
+/*         arm_mat_add_f32(&H_Ppred_HT, kf.R, &S); */
+/*         #<{(| k = p_pred <> tr h <> inv s  -- Коэффициент Калмана |)}># */
+/*         // inv_S */
+/*         float32_t tempIS[4] = {0}; */
+/*         arm_matrix_instance_f32 I_S = {2, 2, tempIS}; */
+/*         arm_mat_inverse_f32(&S,&I_S); */
+/*         // P_pred <> tr h */
+/*         float32_t tempPpredHT[8] = {0}; */
+/*         arm_matrix_instance_f32 Ppred_HT = {4, 2, tempPpredHT}; */
+/*         arm_mat_mult_f32(&P_pred, &H_T, &Ppred_HT); */
+/*         // k = p_pred <> tr h <> inv s */
+/*         arm_mat_mult_f32(&Ppred_HT, &I_S, kf.K); */
+/*         #<{(| x_upd = x_pred + k #> y  -- Обновленная оценка состояния |)}># */
+/*         float32_t ky[4] = {0}; */
+/*  */
+/*         arm_mat_vec_mult_f32(kf.K, vec_Y, ky); */
+/*         arm_add_f32(xpred, ky, kf.vec_X, 4); */
+/*  */
+/*         #<{(| i_kh = ident 4 - (k <> h)  -- I - KH |)}># */
+/*         float32_t tempKH[16] = {0}; */
+/*         arm_matrix_instance_f32 K_H = {4, 4, tempKH}; */
+/*         arm_mat_mult_f32(kf.K, kf.H, &K_H); */
+/*         float32_t tempIKH[16] = {0}; */
+/*         arm_matrix_instance_f32 I_K_H = {4, 4, tempIKH}; */
+/*         arm_mat_sub_f32(kf.I, &K_H, &I_K_H); */
+/*         #<{(| p_upd = i_kh <> p_pred  -- Обновленная ковариационная матрица |)}># */
+/*         arm_mat_mult_f32(&I_K_H, &P_pred, kf.P); */
+/*  */
+/*         float32_t kalman_azimuth = calculateAzimuth(RAD_TO_DEG * kf.vec_X[0], RAD_TO_DEG * kf.vec_X[1], &iir_mag); */
+/*         #<{(| printf(" :: %.2f %.2f \n ", kalman_pitch, kalman_roll); |)}># */
+/*  */
+/*         fprintf(outputFile, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n", */
+/*                 dataCollection.entries[i].time, */
+/*                 pitchRoll.pitch, */
+/*                 pitchRoll.roll, */
+/*                 azimuth, */
+/*                 RAD_TO_DEG * kf.vec_X[0], */
+/*                 RAD_TO_DEG * kf.vec_X[1], */
+/*                 kalman_azimuth, */
+/*                 iir_pitchRoll.pitch, */
+/*                 iir_pitchRoll.roll, */
+/*                 iir_azimuth); */
+/*  */
+/*     } */
     // Закрываем файл
     fclose(outputFile);
-    printf("\nРезультаты успешно записаны в файл: %s\n", OUTPUT_FILE);
+    /* printf("\nРезультаты успешно записаны в файл: %s\n", OUTPUT_FILE); */
     
     // Освобождаем память
     freeDataCollection(&dataCollection);
