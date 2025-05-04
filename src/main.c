@@ -228,7 +228,7 @@ int main() {
         // print_vector(kf.vec_Z, 2);
         /* y = z - (h #> x_pred)  -- Невязка */
         float32_t hx[2] = {0};
-        arm_mat_vec_mult_f32(kf.H, kf.vec_X, hx);
+        arm_mat_vec_mult_f32(kf.H, xpred, hx);
         float32_t vec_Y[2] = {0};
         arm_sub_f32(kf.vec_Z, hx, vec_Y, 2);
         /* s = (h <> p_pred <> tr h) + r'  -- Ковариация невязки */
