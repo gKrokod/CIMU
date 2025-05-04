@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
+# берем архив. внутри него скичваем CMSIS по ссылкам ниже (1 step). Затем собираем (2 step).
 # 1 Step: download in root:
 # git clone https://github.com/ARM-software/CMSIS_5.git
 # git clone https://github.com/ARM-software/CMSIS-DSP.git
