@@ -72,7 +72,7 @@ Angles calculateAngles(const Acceleration* acc) { //DEG
   return angles;
 }
 
-float32_t calculateAzimuth(
+float32_t calculateAzimuth( //DEG
     const float32_t pitch_deg, 
     const float32_t roll_deg, 
     const Mag* mag
@@ -100,6 +100,5 @@ float32_t calculateAzimuth(
     /* if (n < 0 && d >= 0) {azimuth +=  2 * PI;} ; */
     /* if (n < 0 && d < 0) {azimuth += PI;} ; */
     //
-    // Преобразование в градусы
     return (azimuth * RAD_TO_DEG);
 }

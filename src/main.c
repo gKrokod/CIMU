@@ -8,7 +8,6 @@
 
 int main() {
     // Инициализация коллекции данных
-    printf("startNEW\n");
     DataCollection dataCollection;
     initDataCollection(&dataCollection, 10); // Начальная емкость 10
 
@@ -22,13 +21,10 @@ int main() {
     IIRFilter iir;
     initialFilter (&iir, &dataAverage);
 
-    /* KalmanFilter kf; //  */
     Acceleration avg_acc = convertToAcceleration(&dataAverage);
-    /* Mag avg_mag = convertToMag(&dataAverage); */
     Angles avg_angles = calculateAngles(&avg_acc);
     KalmanFilter_t kf;
     kalman_init(&kf, DEG_TO_RAD * avg_angles.pitch, DEG_TO_RAD * avg_angles.roll);
-    /* printf("%0.6f  %0.6f \n",avg_angles.pitch, avg_angles.roll); */
 
     // Для каждой строки входного файла выполняем расчеты и записываем в файл
     for (int i = MAX_AVERAGE_SAMPLES; i < dataCollection.count; i++) {
@@ -40,6 +36,7 @@ int main() {
         
 // iir фильтр
         DataEntry data_i = filterStep (&iir,&dataCollection.entries[i]);
+
         Mag iir_mag = convertToMag(&data_i);
         Acceleration iir_acc = convertToAcceleration(&data_i);
         Angles iir_pitchRoll = calculateAngles(&iir_acc);
@@ -52,6 +49,7 @@ int main() {
 
         float32_t kalman_azimuth = calculateAzimuth(RAD_TO_DEG * kf.vec_X[0], RAD_TO_DEG * kf.vec_X[1], &iir_mag);
 
+// Output file 
         fprintf(outputFile, "%6.1f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\t%15.10f\n",
                 dataCollection.entries[i].time,
                 pitchRoll.pitch,

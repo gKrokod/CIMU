@@ -2,7 +2,6 @@
 #include "arm_math.h"
 #include <stdio.h>
 
-
 // Объявление массива для матрицы F размером 4x4
 static const float32_t F_data[16] = {
       1.0f, 0.0f,  (-DELTA_T),   0.0f,
@@ -77,7 +76,6 @@ static const arm_matrix_instance_f32 I = {4, 4, (float32_t *)I_data};
 // Объявление матрицы P размером 4x4
 static arm_matrix_instance_f32 P = {4, 4, (float32_t *)P_data};
 // Объявление матрицы K размером 4x2
-/* static arm_matrix_instance_f32 K = {4, 2, (float32_t *)K_data}; */
 static arm_matrix_instance_f32 K = {4, 2, (float32_t *)K_data};
 
 void print_matrix(const arm_matrix_instance_f32 *m, const char *name) {
@@ -109,10 +107,10 @@ void kalman_init(KalmanFilter_t *kf, float32_t pitch, float32_t roll) {
     kf->I = &I;
     kf->P = &P;
     kf->K = &K;
-    X_data[0] = pitch;
-    X_data[1] = roll;
-    X_data[2] = 0;
-    X_data[3] = 0;
+    X_data[0] = pitch;//rad
+    X_data[1] = roll;//rad
+    X_data[2] = 0;//rad/s
+    X_data[3] = 0;//rad/s
     kf->vec_X = X_data;
     kf->vec_Z = Z_data;
     kf->vec_U = U_data;
@@ -161,7 +159,6 @@ void kalman_step(KalmanFilter_t *kf, Angles *pitchRoll, Gyro *gyro) {
         arm_mat_add_f32(&F_P_FT, kf->Q, &P_pred);
         //
         /* -- Шаг обновления */
-        // print_vector(kf->vec_Z, 2);
         /* y = z - (h #> x_pred)  -- Невязка */
         float32_t hx[2] = {0};
         arm_mat_vec_mult_f32(kf->H, xpred, hx);

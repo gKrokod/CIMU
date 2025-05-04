@@ -41,7 +41,6 @@ void printInputData(const DataCollection* collection) {
 // Вспомогательная функция для парсинга строки в запись данных
 static int parseDataEntry(const char* line, DataEntry* entry) {
     // Реализация парсинга зависит от формата данных в input.txt
-    // Предполагаем CSV-формат с разделителями-запятыми
     return sscanf(line, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f", 
                   &entry->time, 
                   &entry->time_step, 
@@ -96,7 +95,7 @@ int readDataFile(DataCollection* collection) {
     }
     
     fclose(file);
-    return 0; // Успех
+    return 0;
 }
 
 void printFirstNRows(const DataCollection* collection, int n) {

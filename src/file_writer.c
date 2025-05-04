@@ -4,11 +4,7 @@
 #include "arm_math.h"
 #include "angles.h"
 
-/* #define FILE_OUTPUT_DATA "Data/output.txt" */
-
-/* #define MAX_AVERAGE_SAMPLES 10 */
-
-static DataEntry averageFirstNEntries(const DataCollection* collection, const uint32_t n) {
+static DataEntry averageFirstNEntries(const DataCollection* collection, const int n) {
     DataEntry avgEntry = {0};
     
     if(collection->count < n || n < 1) {
@@ -56,7 +52,7 @@ static DataEntry averageFirstNEntries(const DataCollection* collection, const ui
     return avgEntry;
 }
 
-DataEntry file_writer_title(const FILE* file, const DataCollection* collection) {
+DataEntry file_writer_title(FILE* file, const DataCollection* collection) {
     // Записываем заголовок в файл
     fprintf(file, "Time\tPitchSensor\tRollSensor\tAzimuthSensor\tPitchKalman\tRollKalman\tAzimuthKalman\tPitchIIR\tRollIIR\tAzimuthIIR\n");
     // Усреднение первых 10 записей
