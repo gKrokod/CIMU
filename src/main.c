@@ -46,21 +46,9 @@ int main() {
         float32_t iir_azimuth = calculateAzimuth(iir_pitchRoll.pitch, iir_pitchRoll.roll, &iir_mag);
         
 // Kalman фильтр
-        float32_t sin_tettha, cos_tettha;
-        arm_sin_cos_f32(RAD_TO_DEG * kf.vec_X[0], &sin_tettha, &cos_tettha);
-        float32_t sin_phi, cos_phi;
-        arm_sin_cos_f32(RAD_TO_DEG * kf.vec_X[1], &sin_phi, &cos_phi);
         Gyro gyro = convertToGyro(&dataCollection.entries[i]);
 
-        // -- Control from gyro
-        kf.vec_U[0] = DEG_TO_RAD * (gyro.x * cos_tettha + sin_tettha * (gyro.z * cos_phi + gyro.y * sin_phi)); 
-        kf.vec_U[1] = DEG_TO_RAD * (gyro.y * cos_phi - gyro.z * sin_phi);
-
-        /* z = vector [measuredPitch, measuredRoll] -- тут надо в радианах давать */
-        kf.vec_Z[0] = DEG_TO_RAD * pitchRoll.pitch;
-        kf.vec_Z[1] = DEG_TO_RAD * pitchRoll.roll;
-
-        kalman_step(&kf); 
+        kalman_step(&kf, &pitchRoll, &gyro); 
 
         float32_t kalman_azimuth = calculateAzimuth(RAD_TO_DEG * kf.vec_X[0], RAD_TO_DEG * kf.vec_X[1], &iir_mag);
 

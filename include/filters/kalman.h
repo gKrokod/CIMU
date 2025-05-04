@@ -2,6 +2,7 @@
 #define KALMAN_H
 
 #include "arm_math.h"
+#include "angles.h"
 
 #define DELTA_T 0.04f
 
@@ -30,6 +31,6 @@ typedef struct {
 
 void kalman_init(KalmanFilter_t *kf, float32_t pitch, float32_t roll); 
 
-void kalman_step(KalmanFilter_t *kf) ;
+void kalman_step(KalmanFilter_t *kf, Angles *pitchRoll, Gyro *gyro);
 #endif
 

@@ -84,20 +84,22 @@ float32_t calculateAzimuth(
     float32_t sin_roll, cos_roll;
     arm_sin_cos_f32(roll_deg, &sin_roll, &cos_roll);
 
-    const float32_t n = 
-        -(mag->y * cos_roll - mag->z * sin_roll);
+    const float32_t n = -(mag->y * cos_roll - mag->z * sin_roll);
 
-    const float32_t d = 
-        (mag->y * sin_roll + mag->z * cos_roll) * sin_pitch + 
-        mag->x * cos_pitch;
+    const float32_t d = (mag->y * sin_roll + mag->z * cos_roll) * sin_pitch + 
+                        mag->x * cos_pitch;
 
     // Вычисление азимута с корректировкой квадрантов
-    float32_t azimuth = atan2f(n, d);
-    if (n >= 0 && d >= 0) {azimuth += 0;} ;
-    if (n >= 0 && d < 0) {azimuth += PI;} ;
-    if (n < 0 && d >= 0) {azimuth +=  2 * PI;} ;
-    if (n < 0 && d < 0) {azimuth += PI;} ;
+    float32_t azimuth;
+    arm_atan2_f32(n, d, &azimuth);//status check todo
+    if (azimuth < 0.0f) {azimuth += 2 * PI;}                                  
+
+    /* float32_t azimuth = atan(n/d); //robust */
+    /* if (n >= 0 && d >= 0) {azimuth += 0;} ; */
+    /* if (n >= 0 && d < 0) {azimuth += PI;} ; */
+    /* if (n < 0 && d >= 0) {azimuth +=  2 * PI;} ; */
+    /* if (n < 0 && d < 0) {azimuth += PI;} ; */
     //
     // Преобразование в градусы
-    return azimuth * RAD_TO_DEG;
+    return (azimuth * RAD_TO_DEG);
 }

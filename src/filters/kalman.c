@@ -119,7 +119,21 @@ void kalman_init(KalmanFilter_t *kf, float32_t pitch, float32_t roll) {
 }
 
 
-void kalman_step(KalmanFilter_t *kf) {
+void kalman_step(KalmanFilter_t *kf, Angles *pitchRoll, Gyro *gyro) {
+
+        float32_t sin_tettha, cos_tettha;
+        arm_sin_cos_f32(RAD_TO_DEG * kf->vec_X[0], &sin_tettha, &cos_tettha);
+        float32_t sin_phi, cos_phi;
+        arm_sin_cos_f32(RAD_TO_DEG * kf->vec_X[1], &sin_phi, &cos_phi);
+
+        // -- Control from gyro
+        kf->vec_U[0] = DEG_TO_RAD * (gyro->x * cos_tettha + sin_tettha * (gyro->z * cos_phi + gyro->y * sin_phi)); 
+        kf->vec_U[1] = DEG_TO_RAD * (gyro->y * cos_phi - gyro->z * sin_phi);
+
+        /* z = vector [measuredPitch, measuredRoll] -- тут надо в радианах давать */
+        kf->vec_Z[0] = DEG_TO_RAD * pitchRoll->pitch;
+        kf->vec_Z[1] = DEG_TO_RAD * pitchRoll->roll;
+
         // -- Шаг предсказания DONE
         /* x_pred = f #> x + b #> u */
         float32_t fx[4] = {0};
