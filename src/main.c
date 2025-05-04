@@ -206,7 +206,7 @@ int main() {
     arm_mat_vec_mult_f32(kf.B, kf.vec_U, bu);
     float32_t xpred[4] = {0};
     arm_add_f32(fx, bu, xpred, 4);
-     print_vector(xpred,4);
+    /* print_vector(xpred,4); */
      /* print_vector(bu,4); */
      /* print_vector(kf.vec_U,2); */
 
@@ -234,13 +234,13 @@ int main() {
     /* z = vector [measuredPitch, measuredRoll] -- тут надо в радианах давать */
     kf.vec_Z[0] = DEG_TO_RAD * pitchRoll.pitch;
     kf.vec_Z[1] = DEG_TO_RAD * pitchRoll.roll;
-    print_vector(kf.vec_Z, 2);
+    /* print_vector(kf.vec_Z, 2); */
     /* y = z - (h #> x_pred)  -- Невязка */
     float32_t hx[2] = {0};
     arm_mat_vec_mult_f32(kf.H, xpred, hx);
     float32_t vec_Y[2] = {0};
     arm_sub_f32(kf.vec_Z, hx, vec_Y, 2);
-    print_vector(vec_Y, 2);
+    /* print_vector(vec_Y, 2); */
 
     /* s = (h <> p_pred <> tr h) + r'  -- Ковариация невязки */
     // H_T
@@ -261,6 +261,7 @@ int main() {
     arm_mat_add_f32(&H_Ppred_HT, kf.R, &S);
     /* k = p_pred <> tr h <> inv s  -- Коэффициент Калмана */
     // inv_S
+    print_matrix(&S, "S");
     float32_t tempIS[4] = {0};
     arm_matrix_instance_f32 I_S = {2, 2, tempIS};
     arm_mat_inverse_f32(&S,&I_S);
@@ -270,11 +271,13 @@ int main() {
     arm_mat_mult_f32(&P_pred, &H_T, &Ppred_HT);
     // k = p_pred <> tr h <> inv s
     arm_mat_mult_f32(&Ppred_HT, &I_S, kf.K);
+    print_matrix(kf.K, "K");
     /* x_upd = x_pred + k #> y  -- Обновленная оценка состояния */
     float32_t ky[4] = {0};
 
     arm_mat_vec_mult_f32(kf.K, vec_Y, ky);
     arm_add_f32(xpred, ky, kf.vec_X, 4);
+    print_vector(kf.vec_X, 4);
 
     /* i_kh = ident 4 - (k <> h)  -- I - KH */
     float32_t tempKH[16] = {0};
@@ -285,6 +288,7 @@ int main() {
     arm_mat_sub_f32(kf.I, &K_H, &I_K_H);
     /* p_upd = i_kh <> p_pred  -- Обновленная ковариационная матрица */
     arm_mat_mult_f32(&I_K_H, &P_pred, kf.P);
+    print_matrix(kf.P, "Pupdate");
 
     float32_t kalman_azimuth = calculateAzimuth(RAD_TO_DEG * kf.vec_X[0], RAD_TO_DEG * kf.vec_X[1], &iir_mag);
     /* printf(" :: %.2f %.2f \n ", kalman_pitch, kalman_roll); */
