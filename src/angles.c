@@ -44,17 +44,25 @@ void printAngles(const Angles* sensor){
 float32_t calculateRoll(const Acceleration* acc) { // DEG
     const float32_t n = acc->y;
     const float32_t d = acc->z;
-    return (atan2f(n, d) * RAD_TO_DEG);
+    float32_t roll;
+    arm_atan2_f32(n, d, &roll);
+    if (roll > PI / 2) {roll -= PI;}
+    else if (roll < -PI / 2) {roll += PI;};
+    return (roll * RAD_TO_DEG);
 }
 
 float32_t calculatePitch(const Acceleration* acc) { // DEG
     const float32_t n = acc->x;
     const float32_t vec[2] = {acc->y, acc->z};
     float32_t sum_squares;
-    arm_dot_prod_f32(&vec, &vec, 2, &sum_squares);
+    arm_dot_prod_f32(vec, vec, 2, &sum_squares);
     float32_t d;
     arm_sqrt_f32(sum_squares, &d);
-    return -(atan2f(n, d) * RAD_TO_DEG);
+    float32_t pitch;
+    arm_atan2_f32(n, d, &pitch);//status check todo
+    if (pitch > PI / 2) {pitch -= PI;} // otherwise [-p;p]
+    else if (pitch < -PI / 2) {pitch += PI;};
+    return -(pitch * RAD_TO_DEG);
 }
 
 Angles calculateAngles(const Acceleration* acc) { //DEG
@@ -70,10 +78,10 @@ float32_t calculateAzimuth(
     const Mag* mag
 ) {
 
-    const float32_t sin_pitch, cos_pitch;
+    float32_t sin_pitch, cos_pitch;
     arm_sin_cos_f32(pitch_deg, &sin_pitch, &cos_pitch);
 
-    const float32_t sin_roll, cos_roll;
+    float32_t sin_roll, cos_roll;
     arm_sin_cos_f32(roll_deg, &sin_roll, &cos_roll);
 
     const float32_t n = 

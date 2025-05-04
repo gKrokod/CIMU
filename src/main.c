@@ -142,10 +142,7 @@ void kalman_init(KalmanFilter_t *kf, float32_t pitch, float32_t roll) {
 
 
 int main() {
-    //
-    printf("Kalman Test\n");
     // Инициализация коллекции данных
-    //
     printf("startNEW\n");
     DataCollection dataCollection;
     initDataCollection(&dataCollection, 10); // Начальная емкость 10
@@ -166,9 +163,8 @@ int main() {
     Angles avg_angles = calculateAngles(&avg_acc);
     KalmanFilter_t kf;
     kalman_init(&kf, DEG_TO_RAD * avg_angles.pitch, DEG_TO_RAD * avg_angles.roll);
-    printf("%0.6f  %0.6f \n",avg_angles.pitch, avg_angles.roll);
+    /* printf("%0.6f  %0.6f \n",avg_angles.pitch, avg_angles.roll); */
 
-    printf("\n");
     // Для каждой строки входного файла выполняем расчеты и записываем в файл
     for (int i = MAX_AVERAGE_SAMPLES; i < dataCollection.count; i++) {
       // сырые данные
