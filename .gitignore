@@ -51,6 +51,8 @@ build/
 *.cmd
 .tmp_versions/
 .build/
+# exemplary
+.Data/minicode.txt 
 modules.order
 Module.symvers
 Mkfile.old

@@ -5,6 +5,7 @@ add_executable(CIMU
   file_writer.c
   angles.c
   filters/iir.c
+  filters/kalman.c
 )
 
 target_link_libraries(CIMU PRIVATE CMSISDSP)
