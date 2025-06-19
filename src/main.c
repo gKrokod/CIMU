@@ -24,10 +24,13 @@ int main() {
     Acceleration avg_acc = convertToAcceleration(&dataAverage);
     Angles avg_angles = calculateAngles(&avg_acc);
     KalmanFilter_t kf;
-    kalman_init(&kf, DEG_TO_RAD * avg_angles.pitch, DEG_TO_RAD * avg_angles.roll);
+    kalman_init(&kf, 0, 0);
+    printf("\n Start: vec_X[0]=%5.0f \t vec_X[1]=%5.0f \n", kf.vec_X[0],kf.vec_X[1]);
+    /* kalman_init(&kf, DEG_TO_RAD * avg_angles.pitch, DEG_TO_RAD * avg_angles.roll); */
 
     // Для каждой строки входного файла выполняем расчеты и записываем в файл
-    for (int i = MAX_AVERAGE_SAMPLES; i < dataCollection.count; i++) {
+    for (int i = MAX_AVERAGE_SAMPLES; i < 15; i++) {
+    /* for (int i = MAX_AVERAGE_SAMPLES; i < dataCollection.count; i++) { */
       // сырые данные
         Mag mag = convertToMag(&dataCollection.entries[i]);
         Acceleration acc = convertToAcceleration(&dataCollection.entries[i]);
@@ -44,8 +47,11 @@ int main() {
         
 // Kalman фильтр
         Gyro gyro = convertToGyro(&dataCollection.entries[i]);
-
+    
+        printf("Before Kalman: vec_X[0]=%6.2f \t vec_X[1]=%6.2f \n", kf.vec_X[0],kf.vec_X[1]);
+        printf("Arguments for Kalman: pitch = %6.2f \t roll = %6.2f \t gyroX = %6.2f \t gyroY = %6.2f \t gyroZ = %6.2f\n ", pitchRoll.pitch, pitchRoll.roll, gyro.x ,gyro.y, gyro.z);
         kalman_step(&kf, &pitchRoll, &gyro); 
+        printf("After Kalman: vec_X[0]=%6.2f \t vec_X[1]=%6.2f \n", kf.vec_X[0],kf.vec_X[1]);
 
         float32_t kalman_azimuth = calculateAzimuth(RAD_TO_DEG * kf.vec_X[0], RAD_TO_DEG * kf.vec_X[1], &iir_mag);
 
